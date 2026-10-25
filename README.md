@@ -20,6 +20,10 @@ nixpkgs, compares the pins with the newest minix tag (it warns only), writes `pr
 one release commit, and makes the annotated tag. It never pushes. It prints the two push commands for `origin`. The branch is
 `release` (`BASIX_RELEASE_BRANCH` changes it). The release commit needs a GREEN `testee verify` before you push it.
 
+## Contributing
+
+Pull requests are welcome, but the author does not promise a review.
+
 ## Author
 
 Bullish-Intelligence <242310653+Bullish-Intelligence@users.noreply.github.com>
