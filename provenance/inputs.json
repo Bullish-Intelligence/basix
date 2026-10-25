@@ -1,0 +1,54 @@
+{
+  "checks": [
+    "PASS the disk guard file is unchanged (sha256 04945472dc3f09d8f039c198cec65e3262d9c3c76142fb42765ed5426b32635c)",
+    "PASS stale-source: evaluation fails with: system.py changed: run `basix apply`",
+    "PASS stale-no-reads: evaluation fails with: system.py changed: run `basix apply`",
+    "PASS stale-read: evaluation fails with: note.txt changed: run `basix apply`",
+    "PASS missing-read: evaluation fails with: note.txt is not in the flake. Run `git add note.txt`, then `basix apply`",
+    "PASS pair-nixpkgs: evaluation fails with: basix: pynix_os was generated from nixpkgs bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb, but flake.lock holds nixpkgs",
+    "PASS input-missing: evaluation fails with: the input `bar` is not in flake.nix: run `basix apply`",
+    "PASS input-package-stale: evaluation fails with: the package `pynix_foo` was made from another version of `foo` than flake.lock holds; run `basix apply` to make it again",
+    "PASS input-ok: an input package from the locked input evaluates"
+  ],
+  "commit": "6c8a8e4acbd7e60910b450742720c0de50e3844f",
+  "disko": {
+    "narHash": "sha256-CNzzBsRhq7gg4BMBuTDObiWDH/rFYHEuDRVOwCcwXw4=",
+    "rev": "de5708739256238fb912c62f03988815db89ec9a"
+  },
+  "flake-parts": {
+    "narHash": "sha256-zTwuwezD0w3hpga6a6P8emidzAZFyWqlNeRBlpWOOl8=",
+    "rev": "024633cd702b10285db5cb19b40ad48d2399ba60"
+  },
+  "nixos-facter-modules": {
+    "narHash": "sha256-oW0/lC0oRG5H5LaK6Rmh9L1wmkn9TbenM4bXwnIEDKA=",
+    "rev": "139dcef4dfc97009629c445806f197883351ab4a"
+  },
+  "nixpkgs": {
+    "lastModified": 1791456040,
+    "narHash": "sha256-H83yz/do+hjOO0uujHyH8RgtIQP2v7Mw+cLwcZK/xKc=",
+    "rev": "e7439b6b14ad3cc35d05608ebca9bce01a25f5f8"
+  },
+  "previous": null,
+  "pynix": {
+    "narHash": "sha256-NRNvZQo1hU5h1Qsx8ankzMMn8/xbOdFurRritRLzJ00=",
+    "rev": "db40121c9fcff3680c4dde9105c61e6e65f7c025",
+    "tag": "pynix-v0.3.0"
+  },
+  "pynix_os": {
+    "nixpkgs": "e7439b6b14ad3cc35d05608ebca9bce01a25f5f8"
+  },
+  "pyproject-build-systems": {
+    "narHash": "sha256-mGOkvueuMGSRiD75ccxFzfEvSlIU9ztjFluHMKOtogY=",
+    "rev": "a17819c85163988e063806ffc4f6d2716bc8ead8"
+  },
+  "pyproject-nix": {
+    "narHash": "sha256-vcCAvhtA7hG+/gOge29hYHy7I/dLkIsr5nLx4sFEQic=",
+    "rev": "ddc400a6883b042646d0940e65971bb7f7e96107"
+  },
+  "tag": "v0.4.0",
+  "uv2nix": {
+    "narHash": "sha256-PMtgvHuGijoIAtPtrBm7kJOI6fxzX4LYPAIK+QVGY+Y=",
+    "rev": "7aba73a3d85454f1118f8cf9de97979b4d26bcac"
+  },
+  "version": "0.4.0"
+}
