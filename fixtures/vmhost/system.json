@@ -1,0 +1,93 @@
+{
+ "fragments": [
+  {
+   "path": [
+    "basix"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "console": [
+     "ttyS0"
+    ],
+    "user": "learner"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "system"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "stateVersion": "26.05"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "hostName": "basix"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking",
+    "firewall"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "trustedInterfaces": []
+   },
+   "version": 1
+  }
+ ],
+ "modules": [
+  {
+   "file": "vm-root.nix",
+   "root": "workspace",
+   "source": "system.py:5 (Machine)"
+  }
+ ],
+ "name": "basix",
+ "profile": "console",
+ "provenance": {
+  "Console": [],
+  "caches": [],
+  "disk": [],
+  "inputs": [],
+  "name": [
+   "networking.hostName"
+  ],
+  "native_modules": [],
+  "options": [],
+  "programs": [],
+  "serial_console": [
+   "basix.console"
+  ],
+  "state_version": [
+   "system.stateVersion"
+  ],
+  "trusted_interfaces": [
+   "networking.firewall.trustedInterfaces"
+  ],
+  "user": [
+   "basix.user"
+  ],
+  "user_ports": [],
+  "values": []
+ },
+ "reads": {
+  "absent": [],
+  "dirs": {},
+  "files": {},
+  "ignore": [
+   "__pycache__",
+   "system.json"
+  ]
+ },
+ "source_sha256": "24235fba6798c3a3a31ccfab3bf7eedf955abc5e9e556faca8e2dc46388a9d07"
+}

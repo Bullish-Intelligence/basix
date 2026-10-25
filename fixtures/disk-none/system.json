@@ -1,0 +1,82 @@
+{
+ "fragments": [
+  {
+   "path": [
+    "basix"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "user": "learner"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "system"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "stateVersion": "26.05"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "hostName": "trybox"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking",
+    "firewall"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "trustedInterfaces": []
+   },
+   "version": 1
+  }
+ ],
+ "modules": [],
+ "name": "trybox",
+ "profile": "console",
+ "provenance": {
+  "Console": [],
+  "caches": [],
+  "disk": [],
+  "inputs": [],
+  "name": [
+   "networking.hostName"
+  ],
+  "native_modules": [],
+  "options": [],
+  "programs": [],
+  "serial_console": [],
+  "state_version": [
+   "system.stateVersion"
+  ],
+  "trusted_interfaces": [
+   "networking.firewall.trustedInterfaces"
+  ],
+  "user": [
+   "basix.user"
+  ],
+  "user_ports": [],
+  "values": []
+ },
+ "reads": {
+  "absent": [],
+  "dirs": {},
+  "files": {},
+  "ignore": [
+   "__pycache__",
+   "system.json"
+  ]
+ },
+ "source_sha256": "be8f85ae71beb90719f5c05da70cf89a681af25a22efd6fb068bbb107a2e886b"
+}

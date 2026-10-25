@@ -1,0 +1,85 @@
+{
+ "fragments": [
+  {
+   "path": [
+    "basix"
+   ],
+   "source": "system.py:8 (Machine)",
+   "value": {
+    "user": "learner"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "basix",
+    "disk"
+   ],
+   "source": "system.py:8 (Machine)",
+   "value": {
+    "device": "/dev/disk/by-id/virtio-vd-target"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking"
+   ],
+   "source": "system.py:8 (Machine)",
+   "value": {
+    "hostName": "trybox"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking",
+    "firewall"
+   ],
+   "source": "system.py:8 (Machine)",
+   "value": {
+    "trustedInterfaces": []
+   },
+   "version": 1
+  }
+ ],
+ "modules": [],
+ "name": "trybox",
+ "profile": "console",
+ "provenance": {
+  "Console": [],
+  "caches": [],
+  "disk": [
+   "basix.disk.device"
+  ],
+  "inputs": [],
+  "name": [
+   "networking.hostName"
+  ],
+  "native_modules": [],
+  "options": [],
+  "programs": [],
+  "serial_console": [],
+  "state_version": [],
+  "trusted_interfaces": [
+   "networking.firewall.trustedInterfaces"
+  ],
+  "user": [
+   "basix.user"
+  ],
+  "user_ports": [],
+  "values": []
+ },
+ "reads": {
+  "absent": [],
+  "dirs": {},
+  "files": {
+   "note.txt": "983e20f0bce94ab50fde82b36d12c3ae756f8ed857b09f960d5238761c215f4f"
+  },
+  "ignore": [
+   "__pycache__",
+   "system.json"
+  ]
+ },
+ "source_sha256": "688bc1397f56fd1e4d071707820eb986c224559372b760d1827337b246a74f1a"
+}

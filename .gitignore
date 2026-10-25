@@ -1,0 +1,39 @@
+# devenv
+.devenv/
+.devenv.flake.nix
+devenv.local.nix
+
+# direnv
+.direnv/
+
+# python venv / caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# copyroom scratch (template-edit previews/worktrees)
+.copyroom/
+
+# Agent-files convention: the central Devman link plane owns .agents and
+# .claude. Both are symlinks, and neither is tracked in this project.
+# Write the names with no trailing slash. A trailing slash matches only a real
+# directory, not a symlink.
+!AGENTS.md
+!CLAUDE.md
+.agents
+.claude
+
+# repository tools and raw logs
+.jj/
+.gitman/
+.testee/
+.claude/settings.local.json
+.loci
+.basix/
+.copyroom-local.json
+.envrc
+.devman
+.worktrees

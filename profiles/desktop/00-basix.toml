@@ -1,0 +1,3 @@
+# Basix defaults. A later file in this directory (for example config.toml) overrides them.
+[bar.main]
+thickness = 44

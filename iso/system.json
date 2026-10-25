@@ -1,0 +1,75 @@
+{
+ "fragments": [
+  {
+   "path": [
+    "basix"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "console": [
+     "ttyS0"
+    ],
+    "user": "nixos"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "hostName": "basix-iso"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking",
+    "firewall"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "trustedInterfaces": []
+   },
+   "version": 1
+  }
+ ],
+ "modules": [],
+ "name": "basix-iso",
+ "profile": "console",
+ "provenance": {
+  "Console": [],
+  "caches": [],
+  "disk": [],
+  "inputs": [],
+  "name": [
+   "networking.hostName"
+  ],
+  "native_modules": [],
+  "options": [],
+  "programs": [],
+  "serial_console": [
+   "basix.console"
+  ],
+  "state_version": [],
+  "trusted_interfaces": [
+   "networking.firewall.trustedInterfaces"
+  ],
+  "user": [
+   "basix.user"
+  ],
+  "user_ports": [],
+  "values": []
+ },
+ "reads": {
+  "absent": [],
+  "dirs": {},
+  "files": {},
+  "ignore": [
+   "__pycache__",
+   "system.json"
+  ]
+ },
+ "source_sha256": "51c5b709224304b2dee44fbd0ba01026887d1078861e61f8dcdfc3b35101d6ec"
+}

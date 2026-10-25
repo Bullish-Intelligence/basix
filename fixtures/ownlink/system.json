@@ -1,0 +1,222 @@
+{
+ "fragments": [
+  {
+   "path": [
+    "basix"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "user": "learner"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "basix",
+    "disk"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "device": "/dev/disk/by-id/virtio-vd-target"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "hostName": "trybox"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking",
+    "firewall"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "trustedInterfaces": []
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking",
+    "firewall"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "interfaces": {
+     "eno1": {
+      "allowedTCPPorts": [
+       22
+      ]
+     }
+    }
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking",
+    "firewall"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "interfaces": {
+     "wlp2s0": {
+      "allowedTCPPorts": [
+       22
+      ]
+     }
+    }
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking",
+    "firewall"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "interfaces": {
+     "enp3s0": {
+      "allowedTCPPorts": [
+       80
+      ]
+     }
+    }
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "services",
+    "openssh"
+   ],
+   "source": "system.py:9 (RemoteLogin)",
+   "value": {
+    "enable": true,
+    "openFirewall": false,
+    "settings": {
+     "AllowUsers": [
+      "learner"
+     ],
+     "KbdInteractiveAuthentication": false,
+     "PasswordAuthentication": true,
+     "PermitRootLogin": "no"
+    }
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "services",
+    "avahi"
+   ],
+   "source": "system.py:9 (RemoteLogin)",
+   "value": {
+    "allowInterfaces": [
+     "eno1",
+     "wlp2s0"
+    ],
+    "enable": true,
+    "nssmdns4": true,
+    "openFirewall": false,
+    "publish": {
+     "addresses": true,
+     "enable": true
+    }
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking",
+    "firewall"
+   ],
+   "source": "system.py:9 (RemoteLogin)",
+   "value": {
+    "interfaces": {
+     "eno1": {
+      "allowedUDPPorts": [
+       5353
+      ]
+     },
+     "wlp2s0": {
+      "allowedUDPPorts": [
+       5353
+      ]
+     }
+    }
+   },
+   "version": 1
+  }
+ ],
+ "modules": [
+  {
+   "file": "capabilities/remote-login/module.nix",
+   "source": "system.py:9 (RemoteLogin)"
+  }
+ ],
+ "name": "trybox",
+ "profile": "console",
+ "provenance": {
+  "Console": [],
+  "RemoteLogin": [
+   "services.openssh.enable",
+   "services.openssh.openFirewall",
+   "services.openssh.settings.AllowUsers",
+   "services.openssh.settings.KbdInteractiveAuthentication",
+   "services.openssh.settings.PasswordAuthentication",
+   "services.openssh.settings.PermitRootLogin",
+   "services.avahi.allowInterfaces",
+   "services.avahi.enable",
+   "services.avahi.nssmdns4",
+   "services.avahi.openFirewall",
+   "services.avahi.publish.addresses",
+   "services.avahi.publish.enable",
+   "networking.firewall.interfaces.eno1.allowedUDPPorts",
+   "networking.firewall.interfaces.wlp2s0.allowedUDPPorts"
+  ],
+  "caches": [],
+  "disk": [
+   "basix.disk.device"
+  ],
+  "inputs": [],
+  "name": [
+   "networking.hostName"
+  ],
+  "native_modules": [],
+  "options": [],
+  "programs": [],
+  "serial_console": [],
+  "state_version": [],
+  "trusted_interfaces": [
+   "networking.firewall.trustedInterfaces"
+  ],
+  "user": [
+   "basix.user"
+  ],
+  "user_ports": [
+   "networking.firewall.interfaces.eno1.allowedTCPPorts",
+   "networking.firewall.interfaces.wlp2s0.allowedTCPPorts",
+   "networking.firewall.interfaces.enp3s0.allowedTCPPorts"
+  ],
+  "values": []
+ },
+ "reads": {
+  "absent": [],
+  "dirs": {},
+  "files": {},
+  "ignore": [
+   "__pycache__",
+   "system.json"
+  ]
+ },
+ "source_sha256": "d5cc85e96928f8b1ed7e26f8c5574a6ebf2b22f6ed541fc1d44d8e23a68d2d01"
+}

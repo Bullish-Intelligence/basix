@@ -1,0 +1,8 @@
+# yaml-language-server: $schema=https://devenv.sh/devenv.schema.json
+# The Basix development project: the Python venv and the gate tasks.
+# A learner workspace does not read this file. It reads the managed `flake.nix`.
+#
+# This pin repeats the nixpkgs pin of `flake.nix`. `scripts/check_pins.py` compares the two files.
+inputs:
+  nixpkgs:
+    url: github:NixOS/nixpkgs/e7439b6b14ad3cc35d05608ebca9bce01a25f5f8

@@ -1,0 +1,53 @@
+[project]
+name = "basix"
+version = "0.4.0"
+description = "Basix: the typed Python library (basix_config), the compiler of a Basix machine, and the basix command."
+readme = "README.md"
+requires-python = ">=3.13"
+
+# Pydantic is pinned to the version of the pinned nixpkgs: the compiler takes Pydantic from nixpkgs (008-Q7), so the
+# tests must run the same version. `pynix` is not listed: `devenv.nix` links the locked source of the `pynix` flake
+# input into the venv (010-D8), so the tests and the Nix packages read one pin.
+dependencies = [
+  "pydantic==2.13.4",
+  "typer>=0.15.4",
+]
+
+[project.scripts]
+basix = "basix.cli:app"
+
+# The dev group declares the check tools directly: Testee carries none of them. The tasks in `devenv.nix` call them.
+# ruff and ty are pinned to the versions of the pinned nixpkgs (010-D2). Keep `uv.lock` in Git.
+[dependency-groups]
+dev = [
+  "pytest",
+  "pytest-xdist",
+  "ruff==0.16.10",
+  "ty==0.0.84",
+]
+
+[build-system]
+requires = ["hatchling>=1.18"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/basix", "src/basix_config"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# `ruff format` owns the line length. Comments and strings of the proven spike code stay as they are.
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# The typed `__init__` stubs sit inside `if TYPE_CHECKING:`. The editor reads them; Python never runs them.
+"src/basix_config/machine.py" = ["B006", "B008"]
+"src/basix_config/capabilities/*.py" = ["B006"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]

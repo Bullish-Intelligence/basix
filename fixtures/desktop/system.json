@@ -1,0 +1,216 @@
+{
+ "fragments": [
+  {
+   "path": [
+    "basix"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "user": "learner"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "basix",
+    "disk"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "device": "/dev/disk/by-id/virtio-vd-target"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "hostName": "trybox"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking",
+    "firewall"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "trustedInterfaces": []
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "programs",
+    "hyprland"
+   ],
+   "source": "system.py:9 (Desktop)",
+   "value": {
+    "enable": true,
+    "withUWSM": true
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "programs",
+    "noctalia"
+   ],
+   "source": "system.py:9 (Desktop)",
+   "value": {
+    "enable": true,
+    "recommendedServices": {
+     "enable": true
+    },
+    "systemd": {
+     "enable": true
+    }
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "services",
+    "greetd"
+   ],
+   "source": "system.py:9 (Desktop)",
+   "value": {
+    "enable": true,
+    "settings": {
+     "default_session": {
+      "command": {
+       "__nixdantic_ref__": {
+        "kind": "priority",
+        "level": 1000,
+        "value": {
+         "__nixdantic_ref__": {
+          "kind": "text",
+          "parts": [
+           {
+            "__nixdantic_ref__": {
+             "attr": "tuigreet",
+             "kind": "package"
+            }
+           },
+           "/bin/tuigreet --time --remember ",
+           "--cmd basix-session"
+          ]
+         }
+        }
+       }
+      }
+     }
+    },
+    "useTextGreeter": true
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "i18n"
+   ],
+   "source": "system.py:9 (Desktop)",
+   "value": {
+    "defaultLocale": {
+     "__nixdantic_ref__": {
+      "kind": "priority",
+      "level": 1000,
+      "value": "C.UTF-8"
+     }
+    }
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "environment"
+   ],
+   "source": "system.py:9 (Desktop)",
+   "value": {
+    "systemPackages": [
+     {
+      "__nixdantic_ref__": {
+       "attr": "foot",
+       "kind": "package"
+      }
+     },
+     {
+      "__nixdantic_ref__": {
+       "attr": "firefox",
+       "kind": "package"
+      }
+     }
+    ]
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "systemd",
+    "user"
+   ],
+   "source": "system.py:9 (Desktop)",
+   "value": {
+    "tmpfiles": {
+     "rules": [
+      "d %h/.config/noctalia 0755 - - -",
+      "L %h/.config/noctalia/00-basix.toml - - - - /etc/xdg/noctalia/00-basix.toml"
+     ]
+    }
+   },
+   "version": 1
+  }
+ ],
+ "modules": [],
+ "name": "trybox",
+ "profile": "desktop",
+ "provenance": {
+  "Desktop": [
+   "programs.hyprland.enable",
+   "programs.hyprland.withUWSM",
+   "programs.noctalia.enable",
+   "programs.noctalia.recommendedServices.enable",
+   "programs.noctalia.systemd.enable",
+   "services.greetd.enable",
+   "services.greetd.settings.default_session.command",
+   "services.greetd.useTextGreeter",
+   "i18n.defaultLocale",
+   "environment.systemPackages",
+   "systemd.user.tmpfiles.rules"
+  ],
+  "caches": [],
+  "disk": [
+   "basix.disk.device"
+  ],
+  "inputs": [],
+  "name": [
+   "networking.hostName"
+  ],
+  "native_modules": [],
+  "options": [],
+  "programs": [],
+  "serial_console": [],
+  "state_version": [],
+  "trusted_interfaces": [
+   "networking.firewall.trustedInterfaces"
+  ],
+  "user": [
+   "basix.user"
+  ],
+  "user_ports": [],
+  "values": []
+ },
+ "reads": {
+  "absent": [],
+  "dirs": {},
+  "files": {},
+  "ignore": [
+   "__pycache__",
+   "system.json"
+  ]
+ },
+ "source_sha256": "addbcf8efc3484465c749c9db37d0c05446ef48628c0c06ee23f5ad877ff9715"
+}

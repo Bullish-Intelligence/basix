@@ -1,0 +1,150 @@
+{
+ "fragments": [
+  {
+   "path": [
+    "basix"
+   ],
+   "source": "system.py:9 (Machine)",
+   "value": {
+    "user": "learner"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "basix",
+    "disk"
+   ],
+   "source": "system.py:9 (Machine)",
+   "value": {
+    "device": "/dev/disk/by-id/virtio-vd-target"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "system"
+   ],
+   "source": "system.py:9 (Machine)",
+   "value": {
+    "stateVersion": "26.05"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking"
+   ],
+   "source": "system.py:9 (Machine)",
+   "value": {
+    "hostName": "trybox"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking",
+    "firewall"
+   ],
+   "source": "system.py:9 (Machine)",
+   "value": {
+    "trustedInterfaces": []
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "time"
+   ],
+   "source": "system.py:15 (Machine)",
+   "value": {
+    "timeZone": {
+     "__nixdantic_ref__": {
+      "kind": "priority",
+      "level": 50,
+      "value": "America/New_York"
+     }
+    }
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking"
+   ],
+   "source": "system.py:16 (Machine)",
+   "value": {
+    "nameservers": {
+     "__nixdantic_ref__": {
+      "kind": "order",
+      "level": 500,
+      "value": [
+       "1.1.1.1"
+      ]
+     }
+    }
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking"
+   ],
+   "source": "system.py:17 (Machine)",
+   "value": {
+    "nameservers": {
+     "__nixdantic_ref__": {
+      "kind": "order",
+      "level": 1500,
+      "value": [
+       "8.8.8.8"
+      ]
+     }
+    }
+   },
+   "version": 1
+  }
+ ],
+ "modules": [],
+ "name": "trybox",
+ "profile": "console",
+ "provenance": {
+  "Console": [],
+  "caches": [],
+  "disk": [
+   "basix.disk.device"
+  ],
+  "inputs": [],
+  "name": [
+   "networking.hostName"
+  ],
+  "native_modules": [],
+  "options": [
+   "time.timeZone",
+   "networking.nameservers"
+  ],
+  "programs": [],
+  "serial_console": [],
+  "state_version": [
+   "system.stateVersion"
+  ],
+  "trusted_interfaces": [
+   "networking.firewall.trustedInterfaces"
+  ],
+  "user": [
+   "basix.user"
+  ],
+  "user_ports": [],
+  "values": []
+ },
+ "reads": {
+  "absent": [],
+  "dirs": {},
+  "files": {},
+  "ignore": [
+   "__pycache__",
+   "system.json"
+  ]
+ },
+ "source_sha256": "1156aaabe87feb45874f6daf09fe9ba1a3158107bc7888c574dcdf0a1c191692"
+}

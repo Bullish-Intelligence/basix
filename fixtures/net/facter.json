@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "system": "x86_64-linux",
+  "hardware": {
+    "network_interface": [
+      {
+        "sub_class": { "name": "Ethernet" },
+        "unix_device_names": [ "eno1" ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,139 @@
+{
+ "fragments": [
+  {
+   "path": [
+    "basix"
+   ],
+   "source": "system.py:3 (Machine)",
+   "value": {
+    "user": "learner"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "basix",
+    "disk"
+   ],
+   "source": "system.py:3 (Machine)",
+   "value": {
+    "device": "/dev/disk/by-id/virtio-basix-disk"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking"
+   ],
+   "source": "system.py:3 (Machine)",
+   "value": {
+    "hostName": "trybox"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking",
+    "firewall"
+   ],
+   "source": "system.py:3 (Machine)",
+   "value": {
+    "trustedInterfaces": []
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "services",
+    "openssh"
+   ],
+   "source": "system.py:8 (RemoteLogin)",
+   "value": {
+    "enable": true,
+    "openFirewall": false,
+    "settings": {
+     "AllowUsers": [
+      "learner"
+     ],
+     "KbdInteractiveAuthentication": false,
+     "PasswordAuthentication": true,
+     "PermitRootLogin": "no"
+    }
+   },
+   "version": 1
+  },
+  {
+   "path": [],
+   "source": "system.py:8 (RemoteLogin)",
+   "value": {
+    "warnings": [
+     "remote-login: no interface is trusted, so port 22 is closed on every interface. Add your interface to `trusted_interfaces` of your machine in system.py."
+    ]
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking",
+    "firewall"
+   ],
+   "source": "system.py:8 (RemoteLogin)",
+   "value": {
+    "interfaces": {}
+   },
+   "version": 1
+  }
+ ],
+ "modules": [
+  {
+   "file": "capabilities/remote-login/module.nix",
+   "source": "system.py:8 (RemoteLogin)"
+  }
+ ],
+ "name": "trybox",
+ "profile": "console",
+ "provenance": {
+  "Console": [],
+  "RemoteLogin": [
+   "services.openssh.enable",
+   "services.openssh.openFirewall",
+   "services.openssh.settings.AllowUsers",
+   "services.openssh.settings.KbdInteractiveAuthentication",
+   "services.openssh.settings.PasswordAuthentication",
+   "services.openssh.settings.PermitRootLogin",
+   "warnings",
+   "networking.firewall.interfaces"
+  ],
+  "caches": [],
+  "disk": [
+   "basix.disk.device"
+  ],
+  "inputs": [],
+  "name": [
+   "networking.hostName"
+  ],
+  "native_modules": [],
+  "options": [],
+  "programs": [],
+  "serial_console": [],
+  "state_version": [],
+  "trusted_interfaces": [
+   "networking.firewall.trustedInterfaces"
+  ],
+  "user": [
+   "basix.user"
+  ],
+  "user_ports": [],
+  "values": []
+ },
+ "reads": {
+  "absent": [],
+  "dirs": {},
+  "files": {},
+  "ignore": [
+   "__pycache__",
+   "system.json"
+  ]
+ },
+ "source_sha256": "c2364b2153b6ed3c99d918c6eff79a871a90711396278bfb8ae72a209be92485"
+}

@@ -1,0 +1,166 @@
+{
+ "fragments": [
+  {
+   "path": [
+    "basix"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "user": "learner"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "basix",
+    "disk"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "device": "/dev/disk/by-id/virtio-vd-target"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "hostName": "trybox"
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking",
+    "firewall"
+   ],
+   "source": "system.py:5 (Machine)",
+   "value": {
+    "trustedInterfaces": [
+     "enp1s0"
+    ]
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "services",
+    "openssh"
+   ],
+   "source": "system.py:9 (RemoteLogin)",
+   "value": {
+    "enable": true,
+    "openFirewall": false,
+    "settings": {
+     "AllowUsers": [
+      "learner"
+     ],
+     "KbdInteractiveAuthentication": false,
+     "PasswordAuthentication": true,
+     "PermitRootLogin": "no"
+    }
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "services",
+    "avahi"
+   ],
+   "source": "system.py:9 (RemoteLogin)",
+   "value": {
+    "allowInterfaces": [
+     "enp1s0"
+    ],
+    "enable": true,
+    "nssmdns4": true,
+    "openFirewall": false,
+    "publish": {
+     "addresses": true,
+     "enable": true
+    }
+   },
+   "version": 1
+  },
+  {
+   "path": [
+    "networking",
+    "firewall"
+   ],
+   "source": "system.py:9 (RemoteLogin)",
+   "value": {
+    "interfaces": {
+     "enp1s0": {
+      "allowedTCPPorts": [
+       22
+      ],
+      "allowedUDPPorts": [
+       5353
+      ]
+     }
+    }
+   },
+   "version": 1
+  }
+ ],
+ "modules": [
+  {
+   "file": "capabilities/remote-login/module.nix",
+   "source": "system.py:9 (RemoteLogin)"
+  }
+ ],
+ "name": "trybox",
+ "profile": "console",
+ "provenance": {
+  "Console": [],
+  "RemoteLogin": [
+   "services.openssh.enable",
+   "services.openssh.openFirewall",
+   "services.openssh.settings.AllowUsers",
+   "services.openssh.settings.KbdInteractiveAuthentication",
+   "services.openssh.settings.PasswordAuthentication",
+   "services.openssh.settings.PermitRootLogin",
+   "services.avahi.allowInterfaces",
+   "services.avahi.enable",
+   "services.avahi.nssmdns4",
+   "services.avahi.openFirewall",
+   "services.avahi.publish.addresses",
+   "services.avahi.publish.enable",
+   "networking.firewall.interfaces.enp1s0.allowedTCPPorts",
+   "networking.firewall.interfaces.enp1s0.allowedUDPPorts"
+  ],
+  "caches": [],
+  "disk": [
+   "basix.disk.device"
+  ],
+  "inputs": [],
+  "name": [
+   "networking.hostName"
+  ],
+  "native_modules": [],
+  "options": [],
+  "programs": [],
+  "serial_console": [],
+  "state_version": [],
+  "trusted_interfaces": [
+   "networking.firewall.trustedInterfaces"
+  ],
+  "user": [
+   "basix.user"
+  ],
+  "user_ports": [],
+  "values": []
+ },
+ "reads": {
+  "absent": [],
+  "dirs": {},
+  "files": {},
+  "ignore": [
+   "__pycache__",
+   "system.json"
+  ]
+ },
+ "source_sha256": "03b45668a19bdb2fbe14145d7df2a75170e3da9a676cb31e5abda591f2e648be"
+}

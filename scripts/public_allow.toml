@@ -1,0 +1,44 @@
+# Reviewed exceptions of scripts/check_public.py (BSX-415, 012-D12). Each entry names a path glob, a shape, a part of
+# the line, and the reason. The check fails on an entry without a reason.
+
+[[allow]]
+path = "capabilities/remote-login/check.nix"
+shape = "private IP address"
+text = "10.9."
+reason = "Addresses of a network namespace inside the VM test. They exist only during the test."
+
+[[allow]]
+path = "capabilities/remote-login/component.py"
+shape = "e-mail address"
+text = "ACCOUNT@NAME.local"
+reason = "Placeholder in the help text for the ssh command. ACCOUNT and NAME are words for the learner to replace."
+
+[[allow]]
+path = "capabilities/remote-login/lesson.md"
+shape = "e-mail address"
+text = "ACCOUNT@NAME.local"
+reason = "Placeholder in the lesson for the ssh command."
+
+[[allow]]
+path = "scripts/release_vm.py"
+shape = "/mnt/"
+text = "/mnt/host"
+reason = "The mount point inside the test VM, where the guest mounts the host share."
+
+[[allow]]
+path = "scripts/guard_vm.py"
+shape = "/mnt/"
+text = "/mnt/keep"
+reason = "A mount point that the test makes inside the test VM to prove that the disk guard refuses a mounted disk."
+
+[[allow]]
+path = "scripts/apply_vm.py"
+shape = "/mnt/"
+text = '"/mnt/"'
+reason = "The test proves that the launcher script names no mount folder of the host."
+
+[[allow]]
+path = "tests/test_check_docs.py"
+shape = "link into the records"
+text = ".loci/CURRENT.md"
+reason = "The test writes a link into the records on purpose, to prove that check_docs.py rejects it."
