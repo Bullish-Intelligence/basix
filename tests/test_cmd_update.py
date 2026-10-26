@@ -290,18 +290,41 @@ def test_update_falls_back_to_the_ref_when_the_source_is_unknown(tmp_path: Path)
     assert setup.lines[0] == f"Basix {'a' * 7} -> {'c' * 7}"
 
 
-def test_update_never_gives_the_old_commit_the_name_that_the_stub_requests(tmp_path: Path) -> None:
-    """The old source is gone, and the old lock holds a requested ref that names the new release.
+def real_lock(rev: str, url: str, nar_hash: str) -> str:
+    """The `basix` node of a lock that Nix wrote for the channel `release`: `locked.ref` and `original.ref` are both `release`."""
+    lock = json.loads(lock_json(nar_hash=nar_hash, rev=rev))
+    node = lock["nodes"]["basix"]
+    node["locked"] = {**node["locked"], "ref": "release", "url": url}
+    node["original"] = {"type": "git", "url": url, "ref": "release"}
+    return json.dumps(lock)
 
-    The old side must print its commit, never the version of the new release.
-    """
-    setup = initialized(tmp_path, update_to=NEW_LOCK)
-    old = json.loads((setup.ws / "flake.lock").read_text())
-    old["nodes"]["basix"]["original"]["ref"] = "v0.4.0"
-    (setup.ws / "flake.lock").write_text(json.dumps(old))
-    new = json.loads(NEW_LOCK)
-    new["nodes"]["basix"]["original"]["ref"] = "v0.4.0"
-    setup.world.update_to = json.dumps(new)
+
+def test_update_names_the_old_commit_by_its_own_source_across_a_moved_repository(tmp_path: Path) -> None:
+    """The real v0.3.0 to v0.4.0 case: the old lock names the old repository URL, the new lock names the new one."""
+    old_url, new_url = "https://example.org/old/basix", "https://example.org/new/basix"
+    setup = initialized(tmp_path, update_to=real_lock("c" * 40, new_url, "sha256-BBBB"))
+    (setup.ws / "flake.lock").write_text(real_lock("a" * 40, old_url, "sha256-AAAA"))
+    versions = {old_url: "0.3.0", new_url: "0.4.0"}
+
+    def fetch(argv):
+        locked = locked_of(argv[-1])
+        if locked.get("url") not in versions:  # the pynix source
+            return Result(1, "error: not served\n")
+        source = tmp_path / f"source-{locked['rev'][:1]}"
+        source.mkdir(exist_ok=True)
+        (source / "pyproject.toml").write_text(f'[project]\nname = "basix"\nversion = "{versions[locked["url"]]}"\n')
+        return Result(0, json.dumps(str(source)) + "\n")
+
+    setup.fake.on(NIX + ("eval", "--json", "--expr"), fetch)
+    assert commands.update(setup.ctx) == 0, setup.lines
+    assert setup.lines[0] == "Basix v0.3.0 -> v0.4.0"
+
+
+def test_update_prints_only_the_commit_of_an_old_source_that_cannot_be_read(tmp_path: Path) -> None:
+    """The old repository is gone: print the commit for that side, never a name that comes from the new release."""
+    new_url = "https://example.org/new/basix"
+    setup = initialized(tmp_path, update_to=real_lock("c" * 40, new_url, "sha256-BBBB"))
+    (setup.ws / "flake.lock").write_text(real_lock("a" * 40, "https://example.org/old/basix", "sha256-AAAA"))
 
     def fetch(argv):
         locked = locked_of(argv[-1])

@@ -152,8 +152,8 @@ def print_changelog(
 ) -> None:
     """The part of the `pynix` changelog, between the old and the new tag, that names an option that system.py sets."""
     old_node, new_node = locked_node(before, "basix", "pynix"), locked_node(after, "basix", "pynix")
-    old_tag = tag_name(old_node.get("locked", {}).get("ref")) or tag_name(old_node.get("original", {}).get("ref"))
-    new_tag = tag_name(new_node.get("locked", {}).get("ref")) or tag_name(new_node.get("original", {}).get("ref"))
+    old_tag = tag_name(old_node.get("original", {}).get("ref")) or tag_name(old_node.get("locked", {}).get("ref"))
+    new_tag = tag_name(new_node.get("original", {}).get("ref")) or tag_name(new_node.get("locked", {}).get("ref"))
     if not new_node or old_node.get("locked", {}).get("rev") == new_node.get("locked", {}).get("rev"):
         return
     try:
