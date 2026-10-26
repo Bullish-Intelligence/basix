@@ -290,6 +290,33 @@ def test_update_falls_back_to_the_ref_when_the_source_is_unknown(tmp_path: Path)
     assert setup.lines[0] == f"Basix {'a' * 7} -> {'c' * 7}"
 
 
+def test_update_never_gives_the_old_commit_the_name_that_the_stub_requests(tmp_path: Path) -> None:
+    """The old source is gone, and the old lock holds a requested ref that names the new release.
+
+    The old side must print its commit, never the version of the new release.
+    """
+    setup = initialized(tmp_path, update_to=NEW_LOCK)
+    old = json.loads((setup.ws / "flake.lock").read_text())
+    old["nodes"]["basix"]["original"]["ref"] = "v0.4.0"
+    (setup.ws / "flake.lock").write_text(json.dumps(old))
+    new = json.loads(NEW_LOCK)
+    new["nodes"]["basix"]["original"]["ref"] = "v0.4.0"
+    setup.world.update_to = json.dumps(new)
+
+    def fetch(argv):
+        locked = locked_of(argv[-1])
+        if locked["rev"] == "a" * 40:
+            return Result(1, "error: Failed to fetch git repository\n")
+        source = tmp_path / "source-new"
+        (source / "provenance").mkdir(parents=True, exist_ok=True)
+        (source / "provenance" / "inputs.json").write_text(json.dumps({"tag": "v0.4.0"}))
+        return Result(0, json.dumps(str(source)) + "\n")
+
+    setup.fake.on(NIX + ("eval", "--json", "--expr"), fetch)
+    assert commands.update(setup.ctx) == 0, setup.lines
+    assert setup.lines[0] == f"Basix {'a' * 7} -> v0.4.0"
+
+
 def test_update_reads_each_release_from_its_own_lock_and_never_archives_the_stub(tmp_path: Path) -> None:
     """011 bug 1: the stub already named the new channel, so an archive of it gave the new source for the old lock."""
     setup = initialized(tmp_path, update_to=NEW_LOCK)

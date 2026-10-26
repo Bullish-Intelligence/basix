@@ -85,13 +85,15 @@ def read_release(lock: Mapping[str, Any], name: str, source: str | None) -> Rele
     """The release of the input `name`.
 
     For Basix, the name comes from the tag that its source records, else the version of its source. For every input,
-    the git ref comes next, then the short revision (010-D31).
+    the ref that the lock resolved for the commit comes next, then the short revision (010-D31). The ref that the stub
+    requested (`original`) names no commit: a stub can follow a tag or a branch that moved since the lock. It never
+    gives a name, so the old side of an update cannot take the name of the new release.
     """
     node = locked_node(lock, name)
-    locked, original = node.get("locked", {}), node.get("original", {})
+    locked = node.get("locked", {})
     rev = locked.get("rev")
     own = (source_tag(source) or source_version(source)) if name == "basix" else None
-    label = own or tag_name(locked.get("ref")) or tag_name(original.get("ref")) or (rev[:7] if rev else None)
+    label = own or tag_name(locked.get("ref")) or (rev[:7] if rev else None)
     return Release(label or "unknown", locked.get("narHash"), rev)
 
 
