@@ -1,5 +1,6 @@
 """The command line: the four commands, their options, and the exit codes (the work itself is in `test_cmd_*`)."""
 
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -22,6 +23,12 @@ def test_version() -> None:
     result = runner.invoke(app, ["--version"])
     assert result.exit_code == 0
     assert result.output.strip() == f"basix {__version__}"
+
+
+def test_version_is_the_version_of_pyproject() -> None:
+    """`__version__` must not drift from the release version (it came from a second copy before)."""
+    pyproject = tomllib.loads((Path(__file__).parent.parent / "pyproject.toml").read_text())
+    assert __version__ == pyproject["project"]["version"]
 
 
 def test_no_arguments_show_the_help() -> None:
