@@ -1,4 +1,7 @@
-"""`basix install`: write a Basix workspace and install its system from the live ISO."""
+"""`basix install`: write a Basix workspace and install its system from the live ISO.
+
+The workspace is `~/basix` of the new account. `BASIX_WORKSPACE` does not apply to the installer (see `_install`).
+"""
 
 from __future__ import annotations
 
@@ -447,6 +450,9 @@ def _install(
         if account is None:
             raise InstallError(f"the new system has no account {user}")
         uid, gid = account[2], account[3]
+        # The installer runs as root on the live ISO, and the new account has no environment yet. So the variable
+        # BASIX_WORKSPACE has no meaning here: the workspace is always ~/basix of the new account. The learner sets
+        # the variable later and moves the folder.
         target = mnt / "home" / user / "basix"
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copytree(work, target)

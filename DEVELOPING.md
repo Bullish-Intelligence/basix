@@ -51,10 +51,12 @@ The rules are in 009 DECISIONS and 010 DECISIONS in the same records. The reposi
 The `basix` command (`src/basix/cli.py`) has five subcommands. Each takes `--dir` to name the workspace
 (default: the current folder, else the folder in `BASIX_WORKSPACE`, else `~/basix`). A person who keeps the workspace
 elsewhere sets `BASIX_WORKSPACE`. If the variable names a folder with no `system.py`, the command stops with a plain line.
+Basix has no `init` command. Only `basix install` makes a workspace, and its folder is fixed (see the table). `minix init` does
+read `MINIX_WORKSPACE`: it makes that folder and its missing parents, and else `~/minix`.
 
 | Command | What it does |
 | --- | --- |
-| `basix install` | Runs from the live ISO as root. Asks for the machine name, account, password, time zone, and disk. Writes the workspace `~/basix` and installs. Refuses BIOS boot, no network, a small disk, and a used disk until the learner agrees to erase it. |
+| `basix install` | Runs from the live ISO as root. Asks for the machine name, account, password, time zone, and disk. Writes the workspace `~/basix` of the new account and installs. It never reads `BASIX_WORKSPACE`: the installer runs as root on the live ISO, and the variable of the new account does not exist yet. Refuses BIOS boot, no network, a small disk, and a used disk until the learner agrees to erase it. |
 | `basix apply` | Compiles `system.py`, builds the system, asks for the password once, switches, checks the services, then saves the files in Git. It prints "nothing to change" when the system is current. |
 | `basix undo` | Drops an edit that was not applied. Else it returns to the save before the last one. Then it applies. |
 | `basix update [NAME]` | Moves the lock of Basix, or of one input of `system.py`. A stub that follows the `path:` copy of the installer moves to the release channel first, with one line that says so. It prints the old and new release and the changelog lines that touch the settings of the workspace. Run `basix apply` after it. |

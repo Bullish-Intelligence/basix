@@ -73,5 +73,5 @@ def explain_command(
 
 @app.command("install")
 def install_command() -> None:
-    """Install Basix on this computer."""
+    """Install Basix on this computer. The workspace is ~/basix of the new account; BASIX_WORKSPACE does not apply."""
     _exit(install_basix())

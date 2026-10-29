@@ -215,6 +215,17 @@ def test_install_steps_run_in_order_and_the_password_stays_on_stdin(
     assert (mnt / "etc/localtime").readlink() == Path("/etc/zoneinfo/Europe/Paris")
 
 
+def test_the_workspace_is_in_the_home_of_the_new_account_whatever_the_environment_says(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The installer runs as root, and the variable of the new account cannot be known (016)."""
+    monkeypatch.setenv("BASIX_WORKSPACE", str(tmp_path / "elsewhere"))
+    work, mnt = _mount(tmp_path)
+    installer._install(work, "box", "learner", "pw", "UTC", DISK, [], "/nix/store/script", FakeRun(), mnt=mnt)
+    assert (mnt / "home/learner/basix/system.py").is_file()
+    assert not (tmp_path / "elsewhere").exists()
+
+
 def test_the_step_lines_come_in_order(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     work, mnt = _mount(tmp_path)
     installer._install(work, "box", "learner", "pw", "UTC", DISK, [], "/nix/store/script", FakeRun(), mnt=mnt)
