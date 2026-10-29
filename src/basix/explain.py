@@ -31,12 +31,14 @@ FILES_SHOWN = 3
 ITEMS_SHOWN = 8
 #: The longest text of a value.
 VALUE_WIDTH = 100
+#: The most child names that the line for a prefix of options shows.
+CHILDREN_SHOWN = 6
 
 #: The Nix function that `nix eval --apply` runs on the machine. `PATHS` is the JSON text of the list of option paths.
 #: For each path it finds the longest prefix that is an option, takes the value from `config`, and takes the files from
 #: `definitionsWithLocations` of the option (only the winning definitions). A path below an option with free names
 #: (`services.openssh.settings.AllowUsers`) keeps the definitions that hold the rest of the path. A path with no option
-#: gets the names that stand beside it, for "did you mean".
+#: gets the names that stand beside it, for "did you mean". A path that is a prefix of options gets the names below it.
 EXPRESSION = """\
 m:
 let
@@ -72,7 +74,13 @@ let
       hasRest = d: rest == [ ] || (builtins.isAttrs d.value && lib.hasAttrByPath rest d.value);
       got = safe (show 4 (lib.attrByPath parts null m.config));
     in
-    if found == null then { name = p; known = false; near = beside parts; }
+    if found == null then
+      let
+        below = lib.attrByPath parts null m.options;
+        children = builtins.filter (s: !(lib.hasPrefix "_" s)) (builtins.attrNames below);
+      in
+      { name = p; known = false; near = beside parts; }
+      // lib.optionalAttrs (builtins.isAttrs below && !(lib.isOption below) && children != [ ]) { inherit children; }
     else {
       name = p;
       known = true;
@@ -187,11 +195,17 @@ def lines_for(item: dict[str, Any], provenance: dict[str, list[str]]) -> list[st
 def _missing(item: dict[str, Any]) -> str:
     """The line for an option path that no option holds."""
     path = item["name"]
+    children = sorted(item.get("children") or [])
+    if children:  # the path is a prefix of options, not an option: say so and list the names below it
+        shown = ", ".join(f"`{path}.{c}`" for c in children[:CHILDREN_SHOWN])
+        more = f", and {len(children) - CHILDREN_SHOWN} more" if len(children) > CHILDREN_SHOWN else ""
+        return f"`{path}` is not an option of this machine. It holds these options: {shown}{more}."
     parts = path.split(".")
     prefix = item["near"]["prefix"]
     word = parts[len(prefix)] if len(parts) > len(prefix) else parts[-1]
     near = _close(word, item["near"]["names"])
-    advice = f" Did you mean `{'.'.join([*prefix, near])}`?" if near else ""
+    suggestion = ".".join([*prefix, near]) if near else None
+    advice = f" Did you mean `{suggestion}`?" if suggestion and suggestion != path else ""  # never repeat the name
     return f"`{path}` is not an option of this machine.{advice}"
 
 

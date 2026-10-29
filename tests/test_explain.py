@@ -177,6 +177,35 @@ def test_a_path_that_is_no_option_gets_did_you_mean(tmp_path: Path, capsys: pyte
     ]
 
 
+def test_a_prefix_of_options_lists_the_names_below_it(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    runner = FakeRunner()
+    near = {"prefix": ["services"], "names": ["openssh", "restic", "resolved"]}
+    answer(runner, {"name": "services.restic", "known": False, "near": near, "children": ["server", "backups"]})
+    code, out, err = run(workspace(tmp_path), "services.restic", runner, capsys)
+    assert (code, out) == (1, [])
+    assert err == [
+        "`services.restic` is not an option of this machine."
+        " It holds these options: `services.restic.backups`, `services.restic.server`."
+    ]
+    assert "Did you mean" not in err[0]
+
+
+def test_a_long_list_of_children_is_cut(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    runner = FakeRunner()
+    names = [f"n{i}" for i in range(9)]
+    answer(runner, {"name": "x", "known": False, "near": {"prefix": [], "names": names}, "children": names})
+    _code, _out, err = run(workspace(tmp_path), "x", runner, capsys)
+    assert err[0].endswith("`x.n5`, and 3 more.")
+
+
+def test_a_missing_path_never_suggests_itself(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    runner = FakeRunner()
+    near = {"prefix": ["services"], "names": ["restic"]}
+    answer(runner, {"name": "services.restic", "known": False, "near": near})
+    code, _out, err = run(workspace(tmp_path), "services.restic", runner, capsys)
+    assert (code, err) == (1, ["`services.restic` is not an option of this machine."])
+
+
 def test_a_nix_error_prints_the_cause(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     runner = FakeRunner()
     runner.on(("nix",), Result(1, "warning: x\nerror: system.py changed: run `basix apply`\n"))
