@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.4.2
+
+```text
+Basix 0.4.2 (pynix pynix-v0.3.0; nixpkgs e7439b6, 2026-10-08)
+Previous: v0.4.1. Commits since then: 4.
+- Version 0.4.2
+- Merge fix-candidate-unit-isolation-v0.4.0: isolate systemd verification to candidate units
+- Format candidate unit verification command
+- Isolate systemd verification to candidate units
+```
+
 ## v0.4.1
 
 ```text
