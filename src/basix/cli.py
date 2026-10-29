@@ -15,7 +15,8 @@ app = typer.Typer(
 )
 
 Folder = Annotated[
-    Path | None, typer.Option("--dir", help="The workspace folder (default: the current one, else ~/basix).")
+    Path | None,
+    typer.Option("--dir", help="The workspace folder (default: the current one, else $BASIX_WORKSPACE, else ~/basix)."),
 ]
 Verbose = Annotated[bool, typer.Option("--verbose", help="Show every command and its output.")]
 

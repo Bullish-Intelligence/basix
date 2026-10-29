@@ -95,7 +95,7 @@ def workspace_layer(ctx: Context, ws: Path) -> Layer:
 
 def run_engine(ctx: Context, explicit: Path | None, verbose: bool, action: str) -> int:
     try:
-        ws = find_workspace(explicit, ctx.cwd, ctx.home)
+        ws = find_workspace(explicit, ctx.cwd, ctx.home, ctx.env)
         layer = workspace_layer(ctx, ws)
     except Fail as failure:
         ctx.say(str(failure))
@@ -118,7 +118,7 @@ def undo(ctx: Context, directory: Path | None = None, verbose: bool = False) -> 
 def explain(ctx: Context, name: str, directory: Path | None = None) -> int:
     """Print the value of a field, a capability, or an option, and the lines that set it (009-D14)."""
     try:
-        ws = find_workspace(directory, ctx.cwd, ctx.home)
+        ws = find_workspace(directory, ctx.cwd, ctx.home, ctx.env)
     except Fail as failure:
         ctx.say(str(failure))
         return failure.code
@@ -201,7 +201,7 @@ def update(ctx: Context, name: str = "basix", directory: Path | None = None, ver
     that names an option of this workspace (009-D10, 009-D54). It does not switch: the learner runs `apply`.
     """
     try:
-        ws = find_workspace(directory, ctx.cwd, ctx.home)
+        ws = find_workspace(directory, ctx.cwd, ctx.home, ctx.env)
         layer = workspace_layer(ctx, ws)
     except Fail as failure:
         ctx.say(str(failure))

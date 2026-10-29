@@ -40,6 +40,8 @@ RESET_FAILED: Command = (SUDO, "systemctl", "reset-failed")
 FALLBACK_IDENTITY = ("basix", "basix@localhost")
 
 DEFAULT_FOLDER = "~/basix"
+# A person who keeps the workspace elsewhere sets this variable to its folder.
+WORKSPACE_VARIABLE = "BASIX_WORKSPACE"
 
 # The machine name comes from `system.json`, which the compile step writes after the layer exists. The layer holds a
 # placeholder, and `build_command` puts the real attribute in its place.
@@ -65,6 +67,10 @@ class BasixWords(Words):
 
     lock_failed: str = "The inputs could not be locked. Nothing was built, switched, or saved.\n{detail}"
     no_entry: str = "Found no {entry} in {folder}. Run the Basix install first."
+    no_workspace: str = "{path} is not a {name} workspace. Go to {folder} first, or set {variable} to its folder."
+    bad_workspace_variable: str = (
+        "{variable} is {value}, but that folder holds no {entry}. Set {variable} to your workspace folder, or unset it."
+    )
     minix_workspace: str = (
         "{path} is a minix workspace. {name} does not change it.\n"
         "To change your own home, run: minix apply\n"

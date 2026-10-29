@@ -498,7 +498,7 @@ def test_apply_without_a_workspace_says_where_to_go(tmp_path: Path) -> None:
 
     other = make_setup(tmp_path)
     assert commands.apply(other.ctx) == 1
-    assert other.lines == ["~ is not a basix workspace. Go to ~/basix first."]
+    assert other.lines == ["~ is not a basix workspace. Go to ~/basix first, or set BASIX_WORKSPACE to its folder."]
 
 
 def test_apply_finds_the_workspace_from_a_subfolder(setup: Setup) -> None:

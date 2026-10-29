@@ -179,7 +179,9 @@ def test_update_outside_a_workspace_says_where_to_go(setup: Setup) -> None:
     setup.ctx.cwd = setup.home / "nowhere"
     (setup.ws / ".git").rename(setup.ws / ".gone")
     assert commands.update(setup.ctx) == 1
-    assert setup.lines[0].endswith("is not a basix workspace. Go to ~/basix first.")
+    assert setup.lines[0].endswith(
+        "is not a basix workspace. Go to ~/basix first, or set BASIX_WORKSPACE to its folder."
+    )
 
 
 def test_update_waits_when_another_basix_command_runs(setup: Setup) -> None:

@@ -16,7 +16,7 @@ language server. A mistake gives one line with the file, the line, and the colum
 
 ## Commands
 
-Run these in this folder. Type your password when `sudo` asks.
+Run these in this folder, or set `BASIX_WORKSPACE` to it. Type your password when `sudo` asks.
 
 - `basix apply`: build the new system from your files and switch to it.
 - `basix undo`: go back to the system before the last apply, with the files of that time.

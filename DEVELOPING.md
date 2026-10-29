@@ -49,7 +49,8 @@ The rules are in 009 DECISIONS and 010 DECISIONS in the same records. The reposi
 ## Learner commands
 
 The `basix` command (`src/basix/cli.py`) has five subcommands. Each takes `--dir` to name the workspace
-(default: the current folder, else `~/basix`).
+(default: the current folder, else the folder in `BASIX_WORKSPACE`, else `~/basix`). A person who keeps the workspace
+elsewhere sets `BASIX_WORKSPACE`. If the variable names a folder with no `system.py`, the command stops with a plain line.
 
 | Command | What it does |
 | --- | --- |
