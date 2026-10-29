@@ -286,7 +286,13 @@ def install_handlers(fake: FakeRunner, world: World) -> None:
     """Teach the fake runner the commands of a Basix apply."""
 
     def analyze(argv):
-        if argv[:2] == ("systemd-analyze", "verify") and world.analyze is not None:
+        if (
+            len(argv) >= 4
+            and argv[0] == "env"
+            and argv[1].startswith("SYSTEMD_UNIT_PATH=")
+            and argv[2:4] == ("systemd-analyze", "verify")
+            and world.analyze is not None
+        ):
             return Result(0, world.analyze)  # the real program exits 0 even when it finds a cycle
         return None
 
