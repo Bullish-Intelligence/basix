@@ -98,7 +98,10 @@ def analyze_command(top: Path) -> Sequence[str] | None:
     if not target.exists():
         return None
     own = top / ANALYZE
-    return [str(own) if own.exists() else "systemd-analyze", "verify", str(target)]
+    # systemd-analyze otherwise discovers units through the caller's live system. Keep
+    # this override on the analyzer child only; never alter the apply process environment.
+    unit_path = f"{top / UNIT_DIR}:{top / 'sw' / 'lib' / 'systemd' / 'system'}"
+    return ["env", f"SYSTEMD_UNIT_PATH={unit_path}", str(own) if own.exists() else "systemd-analyze", "verify", str(target)]
 
 
 def ordering_cycles(runner: Runner, top: Path, cwd: Path | None = None) -> list[Cycle]:

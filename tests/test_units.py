@@ -25,6 +25,17 @@ data-store-format.service: Found ordering cycle: local-fs.target/start after dat
 data-store-format.service: Job local-fs.target/start deleted to break ordering cycle starting with data-store-format.service/start
 data-store-format.service: Found ordering cycle: local-fs.target/start after data-store.mount/start after data-store-format.service/start - after local-fs.target
 """
+
+
+def is_scoped_analyze(call: list[str] | tuple[str, ...]) -> bool:
+    return (
+        len(call) >= 4
+        and call[0] == "env"
+        and call[1].startswith("SYSTEMD_UNIT_PATH=")
+        and call[2:4] == ("systemd-analyze", "verify")
+    )
+
+
 NOISE = """\
 /nix/store/aaaa-unit-foo/foo.service:12: Unknown key 'Bar' in section [Service], ignoring.
 systemd-udevd.service: Command 'udevadm' is not executable: No such file or directory
@@ -72,6 +83,9 @@ def make_system(root: Path, second_after: str | None) -> Path:
     """A system with two services that boot starts. `a` starts after `b`. `b` starts after `second_after`."""
     units = root / "etc" / "systemd" / "system"
     units.mkdir(parents=True)
+    systemd_units = root / "sw" / "lib" / "systemd" / "system"
+    systemd_units.mkdir(parents=True)
+    (systemd_units / "sysinit.target").write_text("[Unit]\nDescription=system initialization\n")
     (units / "default.target").write_text("[Unit]\nDescription=test\nWants=a.service b.service\n")
     (units / "a.service").write_text("[Unit]\nAfter=b.service\n[Service]\nExecStart=/bin/true\n")
     after = f"After={second_after}\n" if second_after else ""
@@ -98,7 +112,13 @@ def test_a_system_with_no_units_gives_no_cycle(tmp_path: Path) -> None:
 
 def test_the_check_uses_the_program_of_the_built_system_when_it_has_one(tmp_path: Path) -> None:
     top = make_system(tmp_path, None)
-    assert analyze_command(top) == ["systemd-analyze", "verify", str(top / "etc/systemd/system/default.target")]
+    assert analyze_command(top) == [
+        "env",
+        f"SYSTEMD_UNIT_PATH={top}/etc/systemd/system:{top}/sw/lib/systemd/system",
+        "systemd-analyze",
+        "verify",
+        str(top / "etc/systemd/system/default.target"),
+    ]
     program = top / "sw" / "bin" / "systemd-analyze"
     program.parent.mkdir(parents=True)
     program.write_text(
@@ -107,6 +127,23 @@ def test_the_check_uses_the_program_of_the_built_system_when_it_has_one(tmp_path
     program.chmod(program.stat().st_mode | stat.S_IXUSR)
     found = ordering_cycles(SubprocessRunner(), top)
     assert [c.units for c in found] == [("x.service", "y.service")]
+
+
+def test_analyzer_environment_is_candidate_only_and_has_no_host_fallback(tmp_path: Path) -> None:
+    top = make_system(tmp_path, None)
+    calls = []
+
+    class Capture:
+        def run(self, argv, *, cwd=None):
+            calls.append((argv, cwd))
+            return Result(0, "")
+
+    assert ordering_cycles(Capture(), top, cwd=tmp_path) == []
+    argv, cwd = calls[0]
+    assert argv[0] == "env"
+    assert argv[1] == f"SYSTEMD_UNIT_PATH={top}/etc/systemd/system:{top}/sw/lib/systemd/system"
+    assert argv[2:] == ["systemd-analyze", "verify", str(top / "etc/systemd/system/default.target")]
+    assert cwd == tmp_path
 
 
 def test_a_host_with_no_program_gives_no_cycle(tmp_path: Path) -> None:
@@ -146,7 +183,7 @@ def test_apply_prints_no_warning_for_a_system_without_a_cycle(tmp_path: Path) ->
     setup = initialized(tmp_path, analyze=NOISE)
     assert commands.apply(setup.ctx) == 0
     assert not [line for line in setup.lines if "WARNING" in line]
-    assert any(call[0] == "systemd-analyze" for call in setup.fake.calls)
+    assert any(is_scoped_analyze(call) for call in setup.fake.calls)
 
 
 def test_apply_skips_the_check_when_the_system_does_not_change(tmp_path: Path) -> None:
@@ -155,4 +192,4 @@ def test_apply_skips_the_check_when_the_system_does_not_change(tmp_path: Path) -
     setup.lines.clear()
     setup.fake.calls.clear()
     assert commands.apply(setup.ctx) == 0
-    assert not [call for call in setup.fake.calls if call[0] == "systemd-analyze"]
+    assert not [call for call in setup.fake.calls if is_scoped_analyze(call)]
