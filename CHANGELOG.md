@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.5.0
+
+```text
+Basix 0.5.0 (pynix pynix-v0.6.0; nixpkgs e7439b6, 2026-10-08)
+Previous: v0.4.4. Commits since then: 7.
+- Version 0.5.0
+- Document the python field of Input
+- Build the Python code of an input into the input packages
+- Pin pynix-v0.6.0
+- Compile: name the file of an error in a helper module
+- Compile: refuse an Input that the file does not show
+- Compile: the child writes no bytecode
+```
+
 ## v0.4.4
 
 ```text
