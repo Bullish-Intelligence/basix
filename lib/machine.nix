@@ -98,6 +98,9 @@ assert builtins.all (x: x) packageCheck;
     };
     modules = [
       { nixpkgs.hostPlatform = system; }
+      # The pins of the Python inputs, for the warning of minix (021-D3). The file exists with no rows when the entry
+      # has no `python=` input. It is world-readable and holds the input urls without credentials (021-D9).
+      { environment.etc."basix/python-pins.json".text = builtins.toJSON (import "${pynix}/nix/pins.nix" { inherit declared; inputs = extraInputs; }); }
       inputs.disko.nixosModules.disko
     ]
     ++ facter

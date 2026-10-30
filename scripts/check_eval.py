@@ -100,16 +100,16 @@ STEP = threading.local()
 #: The threads of the sub-jobs (see `go`). A sub-job waits for a slot, not for another sub-job, so the size is a bound only.
 JOBS_POOL = ThreadPoolExecutor(max_workers=64, thread_name_prefix="job")
 
-#: The drvPath hash of the T3 anchor machine (`RemoteLogin()`, the test VM module). It changed three times. The value of ACC1
+#: The drvPath hash of the T3 anchor machine (`RemoteLogin()`, the test VM module). It changed four times. The value of ACC1
 #: was `p9rl5qxp29h4pk22jhm26vdgxz4rbjk8`. First the core set `users.users.<user>.linger = mkDefault true` (010-D16,
 #: L79): `b0rsqy8ild5k11hnh8rjlvbhc8aqa42d`. Then the core added the script `minix` to the system packages (L113, P3):
-#: `z4x1vr1c3gj63g4666xwg5nvssvpdmv4`. Then the launcher URL changed to `Bullish-Intelligence` (012-D6, S4): the value
-#: below. The anchor evaluates T3 with `modules/basix-command.nix` disabled (010-D37): that module adds the
+#: `z4x1vr1c3gj63g4666xwg5nvssvpdmv4`. Then the launcher URL changed to `Bullish-Intelligence` (012-D6, S4): `x0fjwm2z5bzxl73hlppg5y0mmmgphwxf`. Then the core added the file
+#: `/etc/basix/python-pins.json` (021-D3): the value below. The anchor evaluates T3 with `modules/basix-command.nix` disabled (010-D37): that module adds the
 #: packages `basix` and the compiler, which are built from the Basix source, so their paths move with every change of
 #: `src/`. `check_command` proves the module on the full T3 machine.
-T3_HASH = "x0fjwm2z5bzxl73hlppg5y0mmmgphwxf"
-#: The T3 hash with `linger` unset (`mkForce null`) and the script `minix` left out (`disabledModules`): the value of
-#: ACC1 returns, so linger and the launcher are the only changes (010-D16, P3).
+T3_HASH = "0lpwq0pbz0kgl8z4jj63wvbh0yvgii9r"
+#: The T3 hash with `linger` unset (`mkForce null`), the script `minix` left out (`disabledModules`), and the file
+#: `/etc/basix/python-pins.json` off: the value of ACC1 returns, so these are the only changes (010-D16, P3, 021-D3).
 T3_NO_LINGER_HASH = "p9rl5qxp29h4pk22jhm26vdgxz4rbjk8"
 #: SHA-256 of `modules/disk-guard.sh`, a byte copy of the B3 spike file. A change needs a new fixture run.
 GUARD_SHA256 = "04945472dc3f09d8f039c198cec65e3262d9c3c76142fb42765ed5426b32635c"
@@ -1027,7 +1027,11 @@ def check_anchor(ev: Evaluator, stages: Stages) -> None:
     other = stages.make(
         "t3",
         "t3-no-linger",
-        edit=disable(["minix.nix", "basix-command.nix"], "  users.users.learner.linger = lib.mkForce null;\n"),
+        edit=disable(
+            ["minix.nix", "basix-command.nix"],
+            "  users.users.learner.linger = lib.mkForce null;\n"
+            '  environment.etc."basix/python-pins.json".enable = lib.mkForce false;\n',
+        ),
     )
     other_job = go(lambda: ev.drv("t3-no-linger", other))
     done = plain_job.result()
@@ -1039,7 +1043,7 @@ def check_anchor(ev: Evaluator, stages: Stages) -> None:
     ok = done.returncode == 0 and f"/{T3_NO_LINGER_HASH}-" in out
     report(
         ok,
-        f"T3 with linger unset and no launcher: the drvPath hash is {T3_NO_LINGER_HASH}, the value of ACC1 (got {out or error_text(done)[-300:]!r})",
+        f"T3 with linger unset, no launcher, and no pins file: the drvPath hash is {T3_NO_LINGER_HASH}, the value of ACC1 (got {out or error_text(done)[-300:]!r})",
     )
 
 
@@ -1360,7 +1364,26 @@ def check_python_input(ev: Evaluator, stages: Stages, compiler: Compiler) -> Non
     parts(
         lambda: python_input_case(ev, stages, compiler, tools, flake=True),
         lambda: python_input_case(ev, stages, compiler, tools, flake=False),
+        lambda: python_pins_empty(ev, stages),
     )
+
+
+def python_pins(ev: Evaluator, folder: Path, label: str) -> tuple[dict | None, str]:
+    """The manifest `/etc/basix/python-pins.json` of the machine `trybox` in `folder`, and the text of a failure."""
+    attr = 'nixosConfigurations.trybox.config.environment.etc."basix/python-pins.json".text'
+    done = run(f"{label}-pins", ["nix", "eval", "--raw", *nix_args(ev.flake, folder, attr)], ev.root)
+    if done.returncode != 0:
+        return None, failure(done)
+    try:
+        return json.loads(done.stdout), ""
+    except ValueError:
+        return None, f" (not JSON: {done.stdout[:200]!r})"
+
+
+def python_pins_empty(ev: Evaluator, stages: Stages) -> None:
+    """A machine with no `python=` input still publishes a valid manifest, with no rows (021-D3)."""
+    manifest, problem = python_pins(ev, stages.make("core", "python-pins-none"), "python-pins-none")
+    report(manifest == {"version": 1, "pins": []}, f"python pins: no python input gives an empty manifest (got {manifest!r}{problem})")
 
 
 def python_input_case(
@@ -1441,6 +1464,25 @@ def python_input_case(
     report(
         zone.returncode == 0 and zone.stdout == "Europe/Oslo",
         f"{shown}: the machine has the value from the code" + ("" if zone.returncode == 0 else failure(zone)),
+    )
+    # 5b. The manifest lists the input: name, url, flake, python folder, and the locked rev and narHash.
+    manifest, problem = python_pins(ev, folder, label)
+    pins = (manifest or {}).get("pins") or [{}]
+    locked_input = json.loads((folder / "flake.lock").read_text())["nodes"]["comps"]["locked"]
+    report(
+        manifest is not None
+        and manifest["version"] == 1
+        and len(manifest["pins"]) == 1
+        and {k: pins[0].get(k) for k in ("name", "url", "flake", "python", "narHash")}
+        == {
+            "name": "comps",
+            "url": f"path:{source}",
+            "flake": flake,
+            "python": "src",
+            "narHash": locked_input["narHash"],
+        }
+        and pins[0].get("rev") == locked_input.get("rev"),
+        f"{shown}: the manifest holds the pin of comps (got {manifest!r}{problem})",
     )
     # 6. A moved input: the lock moves, the compiled file does not, so the evaluation refuses.
     with (source / "src" / "comps" / "__init__.py").open("a") as handle:

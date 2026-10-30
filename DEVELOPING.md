@@ -33,6 +33,10 @@ and Home Manager. The learner path holds no Vendomat and no devenv. devenv is th
   the code. It may import the standard library, `pydantic`, `nixdantic`, `pynix_pkgs`, `pynix_native`, `basix_config`,
   and `pynix_os`. No other third-party package is supported. A package that both layers use must not read the other
   layer: its shared part imports neither `basix_config` nor `minix_config`.
+- Basix publishes the pins of its `python=` inputs in `/etc/basix/python-pins.json` (021-D3, 021-D7). The file always
+  exists: with no `python=` input, it holds an empty list. It is world-readable and holds the input URLs with
+  credentials removed (021-D9). minix reads the file from the activated system and warns when a pin differs. Basix
+  reads nothing of minix and prints no pin warning.
 - A hatch for a setting that has no field: first a field, then `options=[...]` with a generated class, then
   `native_modules=[NativeModule("file.nix")]`.
 - Basix owns `install` and the disk guard. Every disko disk keeps `destroy = false` and the guard hook. Evaluation fails
