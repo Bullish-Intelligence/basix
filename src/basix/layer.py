@@ -46,7 +46,7 @@ WORKSPACE_VARIABLE = "BASIX_WORKSPACE"
 # The machine name comes from `system.json`, which the compile step writes after the layer exists. The layer holds a
 # placeholder, and `build_command` puts the real attribute in its place.
 BUILD_PLACEHOLDER = ".#nixosConfigurations"
-COMPILER_ROOT = "compiler"  # `.git/basix/compiler`: the garbage-collector root of the compiler (BSX-364)
+COMPILER_ROOT = "compiler"  # in the state folder of the checkout (BSX-364): the root of the compiler
 
 
 @dataclass(frozen=True)

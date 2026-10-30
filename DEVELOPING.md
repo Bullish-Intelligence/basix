@@ -62,6 +62,10 @@ read `MINIX_WORKSPACE`: it makes that folder and its missing parents, and else `
 | `basix update [NAME]` | Moves the lock of Basix, or of one input of `system.py`. A stub that follows the `path:` copy of the installer moves to the release channel first, with one line that says so. It prints the old and new release and the changelog lines that touch the settings of the workspace. Run `basix apply` after it. |
 | `basix explain NAME` | Prints the value of a field, a capability, or an option path, and the lines of `system.py` that set it. |
 
+A gitman workspace is a Git linked worktree. `apply`, `undo`, and `update` work in it. Each worktree keeps its own log
+and build links in its Git folder. All worktrees of one repository share one lock, because they change one machine. A
+second command in any worktree prints the "busy" line until the first command ends.
+
 `minix` has `init`, `apply`, `undo`, and `update`. The Basix core ships a `minix` launcher
 (`modules/minix.nix`) that runs the public minix release, so `minix init` works before the home exists. It needs a
 network. After the first `minix apply`, the command of the home takes over.

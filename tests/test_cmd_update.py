@@ -195,6 +195,52 @@ def test_update_waits_when_another_basix_command_runs(setup: Setup) -> None:
     assert setup.nix_calls("flake", "update") == []
 
 
+def add_worktree(setup: Setup) -> Path:
+    """A linked worktree of the workspace, made with real git, and a context that runs inside it."""
+    tree = setup.home / "tree"
+    setup.git("worktree", "add", "--detach", "-q", str(tree))
+    setup.world.ws = tree  # the fake `nix flake update` writes the lock of the worktree
+    setup.ctx.cwd = tree
+    return tree
+
+
+def test_update_runs_in_a_git_worktree_and_keeps_its_log_in_the_worktree_git_folder(setup: Setup) -> None:
+    tree = add_worktree(setup)
+    assert commands.update(setup.ctx) == 0, setup.lines
+    assert setup.lines[-1] == "next: run basix apply to use it"
+    assert (tree / "flake.lock").read_text() == NEW_LOCK
+    git_dir = Path(setup.git("-C", str(tree), "rev-parse", "--absolute-git-dir").strip())
+    assert git_dir != setup.ws / ".git"
+    assert "flake update" in (git_dir / "basix" / "last.log").read_text()
+    assert not (setup.ws / ".git" / "basix" / "last.log").exists()
+
+
+def test_update_in_a_clone_keeps_its_state_in_dot_git(setup: Setup) -> None:
+    assert commands.update(setup.ctx) == 0, setup.lines
+    assert "flake update" in (setup.ws / ".git" / "basix" / "last.log").read_text()
+    assert (setup.ws / ".git" / "basix" / "lock").is_file()
+
+
+def test_update_in_a_worktree_waits_for_a_command_in_the_main_checkout(setup: Setup) -> None:
+    import fcntl
+
+    add_worktree(setup)
+    (setup.ws / ".git" / "basix").mkdir(exist_ok=True)
+    with (setup.ws / ".git" / "basix" / "lock").open("w") as held:  # the lock of the main checkout
+        fcntl.flock(held, fcntl.LOCK_EX)
+        assert commands.update(setup.ctx) == 1
+    assert setup.lines == ["Another basix command runs in this workspace. Wait for it."]
+    assert setup.nix_calls("flake", "update") == []
+
+
+def test_update_in_a_broken_git_file_says_so_in_one_line(setup: Setup) -> None:
+    tree = add_worktree(setup)
+    (tree / ".git").write_text("gitdir: " + str(setup.home / "gone") + "\n")
+    assert commands.update(setup.ctx) == 1
+    assert len(setup.lines) == 1
+    assert setup.nix_calls("flake", "update") == []
+
+
 # --- the parts ---------------------------------------------------------------------------------------
 @pytest.mark.parametrize(
     ("ref", "name"),
