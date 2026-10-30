@@ -52,6 +52,8 @@ FIXED_ENV = {
     "PYTHONHASHSEED": "0",
     "PYTHONUTF8": "1",
     "PYTHONNOUSERSITE": "1",
+    # The child writes no `__pycache__` next to a helper module of the workspace. A `.pyc` file would enter the save.
+    "PYTHONDONTWRITEBYTECODE": "1",
     "LC_ALL": "C.UTF-8",
     "LANG": "C.UTF-8",
     "TZ": "UTC",

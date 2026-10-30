@@ -317,6 +317,18 @@ class TestReadAudit:
         assert compiled.data["values"] == {"v": 3}
         assert list(compiled.data["reads"]["files"]) == ["helper.py"]
 
+    def test_a_helper_module_leaves_no_bytecode(self, command, tmp_path) -> None:
+        text = "from basix_config import *\nimport helper\n\nmachine = Machine(name='a', user='b', disk=None, values={'v': helper.VALUE})\n"
+        compiled = command(text, {"helper.py": "VALUE = 3\n"})
+        assert compiled.code == 0, compiled.err
+        assert compiled.data["values"] == {"v": 3}
+        assert not list(tmp_path.rglob("__pycache__")) and not list(tmp_path.rglob("*.pyc"))
+
+    def test_the_child_environment_writes_no_bytecode(self) -> None:
+        from basix_config.compile import _child_env
+
+        assert _child_env()["PYTHONDONTWRITEBYTECODE"] == "1"
+
     def test_a_read_outside_the_workspace_is_refused(self, workspace, tmp_path_factory) -> None:
         outside = tmp_path_factory.mktemp("outside") / "secret.txt"
         outside.write_text("x")
