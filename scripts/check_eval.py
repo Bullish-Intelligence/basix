@@ -37,6 +37,9 @@ What it proves, with the row IDs:
   through `lib.machine` (L129);
 - one typed `Input(flake=True)` end to end (BSX-397): the stub with `lib.inputPackages`, the lock, the input package
   `pynix_demo`, the compile of a typed value, and the toplevel with the file that the module of the input writes;
+- one `Input(python="src")` end to end, with and without `flake=False`: the stub with `pythonDirs`, the lock, the input
+  package with the linked code, a compile that imports the code (no file in `reads`), and the toplevel with the value
+  from that code. An error in the code names its file, and a moved input fails the evaluation;
 - a second, named nixpkgs end to end (PF-2): `NixpkgsPin("old", COMMIT)` and `Program(old.pkgs.hello)` give the input
   `nixpkgs-old` in the stub, the package list `pynix_nixpkgs_old`, a compile, and a machine that holds the `hello` of
   that commit. The case skips when the pynix pin of the flake predates `NixpkgsPin`; `BASIX_PYNIX_PATH=FOLDER`
@@ -166,6 +169,7 @@ SLOW_FIRST = (
     "desktop",
     "variants",
     "typed-input",
+    "python-input",
     "named-nixpkgs",
     "stub",
     "anchor",
@@ -1323,6 +1327,135 @@ def check_typed_input(ev: Evaluator, stages: Stages, compiler: Compiler) -> None
     )
 
 
+#: An entry with an `Input(python="src")` on `fixtures/demo-python`. `%(url)s` is the folder of the input and
+#: `%(flake)s` is empty or `, flake=False`. The time zone comes from the code of the input.
+PYTHON_INPUT_ENTRY = """\
+from comps import zone
+from pynix_os.time.__options__ import Time
+
+from basix_config import *
+
+machine = Machine(
+    name="trybox",
+    user="learner",
+    disk="/dev/disk/by-id/virtio-vd-target",
+    inputs=[Input("comps", "%(url)s", python="src"%(flake)s)],
+    options=[Time(timeZone=zone())],
+)
+"""
+PYTHON_INPUT_ERROR_ENTRY = PYTHON_INPUT_ENTRY.replace("zone()", "broken()").replace("import zone", "import broken")
+
+
+def failure(done: subprocess.CompletedProcess[str]) -> str:
+    """The end of the output of a failed command, for a FAIL line. Empty when the command passed."""
+    return f" ({error_text(done)[-400:]})" if done.returncode else ""
+
+
+def check_python_input(ev: Evaluator, stages: Stages, compiler: Compiler) -> None:
+    """`Input(python="src")` end to end, as `basix apply` runs it. The input is a flake, then a plain source folder."""
+    tools = compiler_python(compiler)
+    if tools is None:
+        emit("SKIP python input: the compiler is not the package of the flake, so the stub writer is not in reach")
+        return
+    parts(
+        lambda: python_input_case(ev, stages, compiler, tools, flake=True),
+        lambda: python_input_case(ev, stages, compiler, tools, flake=False),
+    )
+
+
+def python_input_case(
+    ev: Evaluator, stages: Stages, compiler: Compiler, tools: tuple[Path, Path], *, flake: bool
+) -> None:
+    python, library = tools
+    label = "python-input" if flake else "python-input-plain"
+    shown = f"python input ({'flake' if flake else 'flake=False'})"
+    source = WORK / f"{label}-source"
+    if source.exists():
+        shutil.rmtree(source)
+    shutil.copytree(ev.root / "fixtures" / "demo-python", source)
+    folder = stages.make("core", label)
+    entry = {"url": f"path:{source}", "flake": "" if flake else ", flake=False"}
+    (folder / "system.py").write_text(PYTHON_INPUT_ENTRY % entry)
+    (folder / "system.json").unlink()
+    # 1. The stub, from the syntax tree of the entry.
+    done = child([str(python), "-P", "-c", STUB_CODE, "system.py"], folder, {**clean_env(), "PYTHONPATH": str(library)})
+    (LOGS / f"{label}-stub.err").write_text(done.stderr)
+    if done.returncode != 0:
+        report(False, f"{shown}: the stub writer runs ({done.stderr[-500:]})")
+        return
+    (folder / "flake.nix").write_text(done.stdout)
+    report('pythonDirs = { comps = "src"; };' in done.stdout, f"{shown}: the stub holds pythonDirs")
+    # 2. The lock, then the input package: the code of the input is linked next to the package `pynix_comps`.
+    nix_basix = ["--no-warn-dirty", "--override-input", "basix", f"path:{ev.flake}"]
+    locked = run(f"{label}-lock", ["nix", "flake", "lock", *nix_basix], folder)
+    report(locked.returncode == 0, f"{shown}: the lock holds the input" + failure(locked))
+    if locked.returncode != 0:
+        return
+    link = folder / ".basix" / "pynix"
+    link.parent.mkdir(exist_ok=True)
+    built = run(
+        f"{label}-package",
+        ["nix", "build", "--out-link", str(link), "--print-out-paths", *nix_basix, f"path:{folder}#input-packages"],
+        ev.root,
+    )
+    report(built.returncode == 0, f"{shown}: the input package builds" + failure(built))
+    if built.returncode != 0:
+        return
+    names = sorted(p.name for p in link.iterdir())
+    report(names == ["comps", "pynix_comps"], f"{shown}: the package holds comps and pynix_comps (got {names!r})")
+    # 3. The compile imports the code. The code is in the store, so `reads` holds no file for it.
+    problem = compiler.compile(folder, label, enabled=True)
+    report(
+        problem is None,
+        f"{shown}: the entry compiles with a value from the code of the input" + (f" ({problem})" if problem else ""),
+    )
+    if problem:
+        return
+    data = json.loads((folder / "system.json").read_text())
+    report(
+        data["reads"]["files"] == {}
+        and [i.get("python") for i in data["inputs"]] == ["src"]
+        and list(data.get("input_packages", {})) == ["comps"],
+        f"{shown}: system.json records the python folder and the package, and reads no file",
+    )
+    # 4. An error in the code names its file and the line of the entry.
+    failing = WORK / "cases" / f"{label}-error"
+    if failing.exists():
+        shutil.rmtree(failing)
+    shutil.copytree(folder, failing, symlinks=True)
+    (failing / "system.py").write_text(PYTHON_INPUT_ERROR_ENTRY % entry)
+    wrong = compiler.compile(failing, f"{label}-error", enabled=True)
+    ok_error = wrong is not None and wrong.strip().endswith(
+        "comps/__init__.py:11: ValueError: comps broke (from system.py:11)"
+    )
+    report(
+        ok_error,
+        f"{shown}: an error in the code names comps/__init__.py" + ("" if ok_error else f" (got {wrong!r})"),
+    )
+    # 5. The toplevel holds the value from the code.
+    zone = run(
+        f"{label}-zone",
+        ["nix", "eval", "--raw", *nix_args(ev.flake, folder, "nixosConfigurations.trybox.config.time.timeZone")],
+        ev.root,
+    )
+    report(
+        zone.returncode == 0 and zone.stdout == "Europe/Oslo",
+        f"{shown}: the machine has the value from the code" + ("" if zone.returncode == 0 else failure(zone)),
+    )
+    # 6. A moved input: the lock moves, the compiled file does not, so the evaluation refuses.
+    with (source / "src" / "comps" / "__init__.py").open("a") as handle:
+        handle.write("# a new line moves the narHash of the input\n")
+    moved = run(f"{label}-update", ["nix", "flake", "update", "comps", *nix_basix], folder)
+    if moved.returncode != 0:
+        report(False, f"{shown}: the lock moves" + failure(moved))
+        return
+    done = ev.drv(f"{label}-moved", folder)
+    wanted = "the package `pynix_comps` was made from another version of `comps` than flake.lock holds"
+    report(done.returncode != 0 and wanted in error_text(done), f"{shown}: a moved input fails the evaluation")
+    if wanted not in error_text(done):
+        emit(error_text(done)[-1000:])
+
+
 #: A nixpkgs commit that is not the one of Basix: its `hello` differs from the `hello` of the Basix nixpkgs. The sources
 #: are in the Nix store of a machine that ran the P8 examples. The commit and hash are those of the SG44 spike.
 OLD_COMMIT = "d233902339c02a9c334e7e593de68855ad26c4cb"
@@ -1824,7 +1957,9 @@ def check_script_order(ev: Evaluator, stages: Stages) -> None:
 
 def copy_source_files(root: Path, target: Path) -> None:
     """Copy the files that the source trees read, and no stray file that the checkout holds."""
-    ignore = shutil.ignore_patterns("__pycache__", "*.pyc", ".devenv", ".direnv", ".venv", ".pytest_cache", ".ruff_cache")
+    ignore = shutil.ignore_patterns(
+        "__pycache__", "*.pyc", ".devenv", ".direnv", ".venv", ".pytest_cache", ".ruff_cache"
+    )
     for name in SOURCE_TREE_FILES:
         source = root / name
         if source.is_dir():
@@ -1960,6 +2095,7 @@ def main(argv: list[str]) -> int:
         "command": lambda: check_command(ev, stages),
         "stub": lambda: check_stub(ev, stages, compiler),
         "typed-input": lambda: check_typed_input(ev, stages, compiler),
+        "python-input": lambda: check_python_input(ev, stages, compiler),
         "named-nixpkgs": lambda: check_named_nixpkgs(ev, stages, compiler),
         "explain": lambda: check_explain(ev, stages, compiler),
         "desktop": lambda: check_desktop(ev, stages, compiler),

@@ -478,7 +478,8 @@ def _pair_check(found: Found, workspace: Path) -> tuple[list[str], dict[str, str
     narhash: dict[str, str] = {}
     if not lines:
         for item in found.inputs:
-            record = read_source(packages / input_package_name(item.name) / "_generation.py") if item.flake else None
+            has_record = item.flake or item.python
+            record = read_source(packages / input_package_name(item.name) / "_generation.py") if has_record else None
             if record and record.get("narHash"):
                 narhash[item.name] = record["narHash"]
     return lines, narhash

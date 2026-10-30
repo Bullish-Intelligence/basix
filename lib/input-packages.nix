@@ -4,11 +4,14 @@
 # before it compiles `system.py`, because the entry imports the classes of the package. The options come from the
 # locked input and from the NixOS base options, so the package follows `flake.lock`.
 #
+# `pythonDirs` maps the name of an input to the folder of its Python code (`Input(python=)`). pynix links the packages
+# and modules of that folder into the same output, so the entry can import them.
+#
 # `extraInputs` is what the stub passes to `lib.machine`: every flake input but `self`, `basix`, and `nixpkgs`. The
 # `nixpkgs-NAME` inputs are pins of `NixpkgsPin("NAME", commit)`. They have no options, so they get no classes. They get
 # the package list `pynix_nixpkgs_NAME` instead, so `NAME.pkgs.PACKAGE` finds its packages (009-D53, 009-D54).
 { self, inputs }:
-{ extraInputs, modules ? { }, system ? "x86_64-linux" }:
+{ extraInputs, modules ? { }, pythonDirs ? { }, system ? "x86_64-linux" }:
 let
   lib = inputs.nixpkgs.lib;
   pins = lib.mapAttrs' (n: v: lib.nameValuePair (lib.removePrefix "nixpkgs-" n) v)
@@ -18,7 +21,7 @@ import "${inputs.pynix}/nix/input-packages.nix" ({
   pkgs = inputs.nixpkgs.legacyPackages.${system};
   layer = "nixos";
   inputs = lib.filterAttrs (n: _: !(lib.hasPrefix "nixpkgs-" n)) extraInputs;
-  inherit modules;
+  inherit modules pythonDirs;
   nixpkgs = inputs.nixpkgs;
   src = "${inputs.pynix}/src";
   specialArgs.inputs = { inherit (inputs) nixpkgs disko; basix = self; } // extraInputs;

@@ -542,6 +542,20 @@ def test_an_unchanged_stub_needs_no_lock_but_the_input_packages_are_built_on_eve
     assert len([c for c in setup.nix_calls("build") if c[-1] == ".#input-packages"]) == 1  # 010-D13
 
 
+def test_a_source_folder_with_python_code_builds_the_input_packages(setup: Setup) -> None:
+    body = 'inputs = [Input("comps", "github:me/comps", flake=False, python="src")]\n'
+    (setup.ws / "system.py").write_text(ENTRY + body)
+    assert apply(setup) == 0, setup.lines
+    assert 'pythonDirs = { comps = "src"; };' in (setup.ws / "flake.nix").read_text()
+    assert len([c for c in setup.nix_calls("build") if c[-1] == ".#input-packages"]) == 1
+
+
+def test_a_source_folder_without_python_code_builds_no_input_packages(setup: Setup) -> None:
+    (setup.ws / "system.py").write_text(ENTRY + 'inputs = [Input("src", "github:me/src", flake=False)]\n')
+    assert apply(setup) == 0, setup.lines
+    assert [c for c in setup.nix_calls("build") if c[-1] == ".#input-packages"] == []
+
+
 def test_an_entry_without_inputs_builds_no_input_packages(setup: Setup) -> None:
     assert apply(setup) == 0, setup.lines
     assert [c for c in setup.nix_calls("build") if c[-1] == ".#input-packages"] == []

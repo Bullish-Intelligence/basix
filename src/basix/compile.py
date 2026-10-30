@@ -96,7 +96,7 @@ def build_input_packages(session: Session) -> None:
 
 def make_input_packages(session: Session, found: Found) -> None:
     """Build the input packages on every run when the entry has inputs that need them (010-D13)."""
-    if any(item.flake for item in found.inputs) or found.nixpkgs:
+    if any(item.flake or item.python for item in found.inputs) or found.nixpkgs:
         build_input_packages(session)
 
 

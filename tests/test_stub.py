@@ -136,6 +136,32 @@ def test_the_input_packages_output_follows_the_inputs_only() -> None:
     assert make_stub(found(f'old = NixpkgsPin("old", "{COMMIT}")')).text.count("input-packages") == 1
 
 
+def test_the_python_folders_of_the_inputs_go_to_the_input_packages() -> None:
+    """`Input(python=...)` adds `pythonDirs`: the folder of the Python code of each input, flake or not."""
+    entry = found(
+        'Input("comps", "github:o/comps", python="src")',
+        'Input("tiny", "github:o/tiny", modules=["tiny"])',
+        'Input("plain", "github:o/plain", flake=False, python=".")',
+        'Input("src", "github:o/s", flake=False)',
+    )
+    text = make_stub(entry, inspect=inspect_with({"github:o/comps": [], "github:o/tiny": []})).text
+    assert '      modules = { tiny = [ "tiny" ]; };\n      pythonDirs = { comps = "src"; plain = "."; };\n' in text
+    assert text.count("pythonDirs") == 1
+    assert "inputs.plain.flake = false;" in text
+
+
+def test_a_python_input_with_no_flake_still_gets_the_input_packages_output() -> None:
+    entry = found('Input("plain", "github:o/plain", flake=False, python="src")')
+    text = make_stub(entry, inspect=lambda url: pytest.fail("a source folder has no input list")).text
+    assert "basix.lib.inputPackages {" in text
+    assert '      modules = { };\n      pythonDirs = { plain = "src"; };\n' in text
+
+
+def test_the_stub_without_a_python_folder_has_no_python_dirs() -> None:
+    entry = found('Input("tiny", "github:o/tiny")', 'Input("src", "github:o/s", flake=False)')
+    assert "pythonDirs" not in make_stub(entry, inspect=inspect_with({"github:o/tiny": []})).text
+
+
 def test_a_plain_source_folder() -> None:
     entry = found('Input("src", "github:o/src", flake=False)')
     stub = make_stub(entry, inspect=lambda url: pytest.fail("a source folder has no input list"))

@@ -11,7 +11,7 @@ import json
 import shutil
 from pathlib import Path
 
-from conftest import ROOT, Compiled, machine_text, run_compile
+from conftest import ROOT, Compiled, machine_text, run_command, run_compile
 
 KEY = "example.cachix.org-1:" + "A" * 43 + "="
 
@@ -585,6 +585,121 @@ class TestInputs:
         # The input is not in this lock, but a plain source folder has no package to compare.
         assert compiled.code == 0, compiled.err
         assert "input_packages" not in compiled.data
+
+
+COMPS_HASH = "sha256-COMPSCOMPSCOMPSCOMPSCOMPSCOMPSCOMPSCOMPSCOM="
+
+COMPS_ENTRY = """\
+from comps import zone
+
+from basix_config import *
+
+machine = Machine(
+    name="trybox",
+    user="learner",
+    disk=None,
+    inputs=[Input("comps", "path:/somewhere/comps", python="src"%(flake)s)],
+    values={"zone": zone()},
+)
+"""
+
+
+class TestPythonInput:
+    """`Input(python="src")`: the entry imports the Python code of an input from `.basix/pynix`."""
+
+    @staticmethod
+    def record(narhash: str = COMPS_HASH) -> dict[str, str]:
+        """The `_generation.py` record of `pynix_comps`. An input that is not a flake has one too."""
+        return {"narHash": narhash, "generator": "g1", "nixpkgs": LAYER}
+
+    def make(self, folder: Path, code: str, *, flake: bool = True, record: bool = True) -> None:
+        """The workspace that `basix apply` leaves: a lock, the package record, and links to the code of the input."""
+        lock = json.loads((ROOT / "tests" / "cases" / "W3-flake.lock").read_text())
+        lock["nodes"]["comps"] = {
+            "locked": {"type": "path", "path": "/somewhere/comps", "narHash": COMPS_HASH, "lastModified": 1},
+            "original": {"type": "path", "path": "/somewhere/comps"},
+        }
+        lock["nodes"]["root"]["inputs"]["comps"] = "comps"
+        (folder / "flake.lock").write_text(json.dumps(lock))
+        if record:
+            generation(folder, "pynix_comps", self.record())
+        # The code is outside the workspace, as in the Nix store. The link in `.basix/pynix` is as `nix build` makes it.
+        (folder / ".basix" / "pynix").mkdir(parents=True, exist_ok=True)
+        store = folder.parent / (folder.name + "-store") / "src" / "comps"
+        store.mkdir(parents=True)
+        (store / "__init__.py").write_text(code)
+        (folder / ".basix" / "pynix" / "comps").symlink_to(store, target_is_directory=True)
+        (folder / "system.py").write_text(COMPS_ENTRY % {"flake": "" if flake else ", flake=False"})
+
+    def test_the_entry_imports_the_code_of_the_input(self, tmp_path: Path) -> None:
+        self.make(tmp_path, "def zone():\n    return 'Europe/Oslo'\n")
+        compiled = run_compile(tmp_path)
+        assert compiled.code == 0, compiled.err
+        data = compiled.data
+        assert data["values"] == {"zone": "Europe/Oslo"}
+        assert data["reads"]["files"] == {}
+        assert [(i["name"], i["python"]) for i in data["inputs"]] == [("comps", "src")]
+        assert data["input_packages"] == {"comps": COMPS_HASH}
+
+    def test_an_input_with_no_flake_has_its_record_too(self, tmp_path: Path) -> None:
+        self.make(tmp_path, "def zone():\n    return 'UTC'\n", flake=False)
+        compiled = run_compile(tmp_path)
+        assert compiled.code == 0, compiled.err
+        assert compiled.data["input_packages"] == {"comps": COMPS_HASH}
+
+    def test_an_input_with_no_python_has_no_record(self, workspace) -> None:
+        text = machine_text('inputs=[Input("src", "github:o/r", flake=False)],')
+        assert "input_packages" not in workspace(text).data
+
+    def test_a_moved_lock_is_refused_at_the_line_of_the_input(self, tmp_path: Path) -> None:
+        self.make(tmp_path, "def zone():\n    return 'UTC'\n")
+        generation(tmp_path, "pynix_comps", self.record("sha256-OTHER"))
+        assert one(run_compile(tmp_path)) == (
+            "system.py:9: the package `pynix_comps` was made from another version of `comps` than flake.lock holds; "
+            "run `basix apply` to make it again"
+        )
+
+    def test_a_missing_record_is_refused(self, tmp_path: Path) -> None:
+        self.make(tmp_path, "def zone():\n    return 'UTC'\n", flake=False, record=False)
+        assert one(run_compile(tmp_path)) == (
+            "system.py:9: the package `pynix_comps` is not made yet; run `basix apply` to make it"
+        )
+
+    def test_an_error_in_the_code_names_its_file_and_the_line_of_the_entry(self, tmp_path: Path) -> None:
+        self.make(tmp_path, "def zone():\n    return 1 / 0\n")
+        (tmp_path / "system.py").write_text(COMPS_ENTRY.replace("zone()", "zone() + ''") % {"flake": ""})
+        assert one(run_compile(tmp_path)) == (
+            "comps/__init__.py:2: ZeroDivisionError: division by zero (from system.py:10)"
+        )
+
+    def test_a_capability_made_in_the_code_names_its_file_as_the_source(self, tmp_path: Path) -> None:
+        """The link in `.basix/pynix` points outside the workspace, as in the Nix store: the name keeps `comps/`."""
+        code = (
+            "from basix_config.component import Capability\n"
+            "from pynix_os.time.__options__ import Time\n\n"
+            "def zone():\n    return 'UTC'\n\n"
+            "class Clock(Capability):\n"
+            "    def emit(self, machine):\n"
+            "        yield Time(timeZone='UTC')\n\n"
+            "CLOCK = Clock()\n"
+        )
+        self.make(tmp_path, code)
+        text = COMPS_ENTRY.replace("import zone", "import CLOCK, zone").replace(
+            "    values=", "    capabilities=[CLOCK],\n    values="
+        )
+        (tmp_path / "system.py").write_text(text % {"flake": ""})
+        compiled = run_compile(tmp_path)
+        assert compiled.code == 0, compiled.err
+        sources = {f["source"] for f in compiled.data["fragments"] if f["path"] == ["time"]}
+        assert sources == {"comps/__init__.py:11 (Clock)"}, sources
+
+    def test_the_real_command_imports_the_code(self, tmp_path: Path) -> None:
+        self.make(tmp_path, "def zone():\n    return 'Europe/Oslo'\n")
+        compiled = run_command(tmp_path)
+        assert compiled.code == 0, compiled.err
+        assert compiled.data["values"] == {"zone": "Europe/Oslo"}
+        assert compiled.data["reads"]["files"] == {}
+        assert not list(tmp_path.rglob("__pycache__")) and not list(tmp_path.parent.rglob("*-store/**/*.pyc"))
 
 
 class TestNixpkgsNames:

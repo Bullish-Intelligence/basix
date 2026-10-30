@@ -178,10 +178,12 @@ def make_stub(
             for item in inputs
             if item.flake and item.modules
         )
+        pythons = " ".join(f"{item.name} = {_nix_string(item.python)};" for item in inputs if item.python)
         package_lines = [
             "packages.x86_64-linux.input-packages = basix.lib.inputPackages {",
             f"  extraInputs = {extra_inputs_expr()};",
             f"  modules = {{ {modules} }};" if modules else "  modules = { };",
+            *([f"  pythonDirs = {{ {pythons} }};"] if pythons else []),
             "};",
         ]
     lines = [HEADER, "{", f"  inputs.basix.url = {_nix_string(basix_url)};"]
