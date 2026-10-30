@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.4.3
+
+```text
+Basix 0.4.3 (pynix pynix-v0.4.0; nixpkgs e7439b6, 2026-10-08)
+Previous: v0.4.2. Commits since then: 7.
+- Version 0.4.3
+- Pin pynix-v0.4.0
+- Copy the lock sources into the apply VM without a signature check
+- Let the VM disk checks work when / is not btrfs
+- Merge v0.4.2 into main
+- explain: list the names below a prefix of options
+- Read the version from the package metadata
+```
+
 ## v0.4.2
 
 ```text

@@ -10,7 +10,7 @@
     "PASS input-package-stale: evaluation fails with: the package `pynix_foo` was made from another version of `foo` than flake.lock holds; run `basix apply` to make it again",
     "PASS input-ok: an input package from the locked input evaluates"
   ],
-  "commit": "a5b1346c47085c4aece29813c19b016452e725f0",
+  "commit": "6d637aefa7cda682ab6ebc6cea009a0a624f3c2d",
   "disko": {
     "narHash": "sha256-CNzzBsRhq7gg4BMBuTDObiWDH/rFYHEuDRVOwCcwXw4=",
     "rev": "de5708739256238fb912c62f03988815db89ec9a"
@@ -28,11 +28,11 @@
     "narHash": "sha256-H83yz/do+hjOO0uujHyH8RgtIQP2v7Mw+cLwcZK/xKc=",
     "rev": "e7439b6b14ad3cc35d05608ebca9bce01a25f5f8"
   },
-  "previous": "v0.4.1",
+  "previous": "v0.4.2",
   "pynix": {
-    "narHash": "sha256-NRNvZQo1hU5h1Qsx8ankzMMn8/xbOdFurRritRLzJ00=",
-    "rev": "db40121c9fcff3680c4dde9105c61e6e65f7c025",
-    "tag": "pynix-v0.3.0"
+    "narHash": "sha256-BnPeIkkAdTu9CUDXYRPS16RdDB0L5dPxfrvuHSeVQv4=",
+    "rev": "d6975ecf95e8a414770ec222d71af44f4b19ab9c",
+    "tag": "pynix-v0.4.0"
   },
   "pynix_os": {
     "nixpkgs": "e7439b6b14ad3cc35d05608ebca9bce01a25f5f8"
@@ -45,10 +45,10 @@
     "narHash": "sha256-vcCAvhtA7hG+/gOge29hYHy7I/dLkIsr5nLx4sFEQic=",
     "rev": "ddc400a6883b042646d0940e65971bb7f7e96107"
   },
-  "tag": "v0.4.2",
+  "tag": "v0.4.3",
   "uv2nix": {
     "narHash": "sha256-PMtgvHuGijoIAtPtrBm7kJOI6fxzX4LYPAIK+QVGY+Y=",
     "rev": "7aba73a3d85454f1118f8cf9de97979b4d26bcac"
   },
-  "version": "0.4.2"
+  "version": "0.4.3"
 }
