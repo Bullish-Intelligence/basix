@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import importlib.util
 import json
 import os
@@ -7,7 +9,9 @@ import sys
 from pathlib import Path
 
 import pytest
+from pynix_engine import Result
 from pynix_native import discover
+from test_units import CYCLE
 
 from basix_config.stub import make_stub
 
@@ -300,6 +304,69 @@ def test_main_stops_when_the_inputs_fail_to_lock(
     assert MODULE.main(["--dir", str(workspace)]) == 1
     assert "input lock failed" in capsys.readouterr().err
     assert fake.boots == []
+
+
+class AnalyzeStub:
+    """Stands in for `SubprocessRunner`. It records the command and returns the text of `systemd-analyze verify`."""
+
+    commands: list[list[str]]
+
+    def __init__(self, out: str) -> None:
+        self.out = out
+        self.commands = []
+
+    def __call__(self) -> AnalyzeStub:
+        return self
+
+    def run(self, argv: list[str], *, cwd: Path | None = None) -> Result:
+        self.commands.append(list(argv))
+        return Result(0, self.out)
+
+
+def add_default_target(fake: FakeNix) -> Path:
+    """Give the built VM system a `default.target`, so the cycle check runs. Return the toplevel."""
+    top = fake.vm_output / "system"
+    (top / "etc" / "systemd" / "system").mkdir(parents=True)
+    (top / "etc" / "systemd" / "system" / "default.target").write_text("")
+    return top
+
+
+def test_main_refuses_to_boot_a_system_with_a_systemd_cycle(
+    tmp_path: Path, fake: FakeNix, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    top = add_default_target(fake)
+    analyze = AnalyzeStub(CYCLE)
+    monkeypatch.setattr(MODULE, "SubprocessRunner", analyze)
+
+    code = MODULE.main(["--dir", str(make_workspace(tmp_path))])
+
+    captured = capsys.readouterr()
+    assert code == 1
+    assert captured.err == (
+        "basix-try: the system has 3 systemd ordering cycle(s), so the VM would boot in a random order.\n"
+        "  cycle 1: local-fs.target, data-store.mount, data-store-format.service\n"
+        "  cycle 2: systemd-boot-random-seed.service, local-fs.target, data-store.mount, data-store-format.service, sysinit.target\n"
+        "  cycle 3: systemd-binfmt.service, local-fs.target, data-store.mount, data-store-format.service, sysinit.target\n"
+        "Fix the order of these units. The VM did not start.\n"
+    )
+    assert "booting" not in captured.out
+    assert fake.boots == []
+    # The check reads the VM system, and only `default.target` of it.
+    (command,) = analyze.commands
+    assert command[-2:] == ["verify", str(top / "etc" / "systemd" / "system" / "default.target")]
+
+
+def test_main_boots_a_system_that_systemd_finds_without_a_cycle(
+    tmp_path: Path, fake: FakeNix, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    add_default_target(fake)
+    analyze = AnalyzeStub("nscd.service: Command 'x' is not executable: No such file or directory\n")
+    monkeypatch.setattr(MODULE, "SubprocessRunner", analyze)
+
+    assert MODULE.main(["--dir", str(make_workspace(tmp_path))]) == 0
+
+    assert len(analyze.commands) == 1
+    assert len(fake.boots) == 1
 
 
 def test_two_runs_keep_their_own_folders(tmp_path: Path, fake: FakeNix, monkeypatch: pytest.MonkeyPatch) -> None:
