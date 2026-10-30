@@ -1,6 +1,6 @@
 [project]
 name = "basix"
-version = "0.4.4"
+version = "0.5.0"
 description = "Basix: the typed Python library (basix_config), the compiler of a Basix machine, and the basix command."
 readme = "README.md"
 requires-python = ">=3.13"
