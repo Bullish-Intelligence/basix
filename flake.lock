@@ -77,16 +77,16 @@
     "pynix": {
       "flake": false,
       "locked": {
-        "lastModified": 1793365845,
-        "narHash": "sha256-BnPeIkkAdTu9CUDXYRPS16RdDB0L5dPxfrvuHSeVQv4=",
-        "ref": "refs/tags/pynix-v0.4.0",
-        "rev": "d6975ecf95e8a414770ec222d71af44f4b19ab9c",
-        "revCount": 6,
+        "lastModified": 1793381853,
+        "narHash": "sha256-Z+dAn/9Gtuj+cV1AoNwDAld4wuS9oN4/QAf/QHASh4s=",
+        "ref": "refs/tags/pynix-v0.5.0",
+        "rev": "7c60a3d3595409ee308b055681dcb9d9498e2f86",
+        "revCount": 11,
         "type": "git",
         "url": "https://github.com/Bullish-Intelligence/pynix"
       },
       "original": {
-        "ref": "refs/tags/pynix-v0.4.0",
+        "ref": "refs/tags/pynix-v0.5.0",
         "type": "git",
         "url": "https://github.com/Bullish-Intelligence/pynix"
       }

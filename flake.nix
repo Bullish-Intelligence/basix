@@ -16,7 +16,7 @@
 
     # The typed Python libraries and the decoder (010-D8). The input is a source folder, not a flake:
     # the Nix code reads `"${inputs.pynix}/src"`. The tag is the record of the release.
-    pynix.url = "git+https://github.com/Bullish-Intelligence/pynix?ref=refs/tags/pynix-v0.4.0";
+    pynix.url = "git+https://github.com/Bullish-Intelligence/pynix?ref=refs/tags/pynix-v0.5.0";
     pynix.flake = false;
 
     # The Python packages of the compiler and the `basix` command are built from `uv.lock` with uv2nix.
