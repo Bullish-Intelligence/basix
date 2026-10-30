@@ -447,6 +447,29 @@ class TestInputs:
             "system.py:2:1: the input `lonely` is not in `Machine(inputs=[...])`. Add it to the list."
         ]
 
+    def test_an_input_built_in_a_helper_is_refused_at_the_machine_line(self, workspace) -> None:
+        text = (
+            "from basix_config import *\n"
+            "from helper import hidden\n"
+            "machine = Machine(name='a', user='b', disk=None, inputs=[hidden])\n"
+        )
+        compiled = workspace(
+            text, {"helper.py": 'from basix_config import Input\nhidden = Input("hidden", "github:o/r", flake=False)\n'}
+        )
+        assert one(compiled) == (
+            'system.py:3: the input `hidden` is not written as Input("hidden", "URL", ...) in system.py. '
+            "Write the Input call in system.py with literal values."
+        )
+
+    def test_an_input_written_in_the_entry_is_kept(self, workspace) -> None:
+        text = (
+            "from basix_config import *\n"
+            "machine = Machine(name='a', user='b', disk=None, inputs=[Input('src', 'github:o/r', flake=False)])\n"
+        )
+        compiled = workspace(text)
+        assert compiled.code == 0, compiled.err
+        assert [(i["name"], i["source"]) for i in compiled.data["inputs"]] == [("src", "system.py:2")]
+
     def test_an_input_with_no_flake_needs_no_package(self, tmp_path: Path) -> None:
         text = machine_text('inputs=[Input("src", "github:o/r", flake=False)],')
         (tmp_path / "system.py").write_text(text)

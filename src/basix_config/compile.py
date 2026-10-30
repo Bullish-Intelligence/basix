@@ -413,7 +413,10 @@ def _pair_check(found: Found, workspace: Path) -> tuple[list[str], dict[str, str
 
 
 def _merge(source: Path, data: bytes, found: Found, narhash: dict[str, str]) -> tuple[dict[str, Any], list[str]]:
-    """Add what the parent knows to the JSON of the child: the exact line of each input, and `input_packages`."""
+    """Add what the parent knows to the JSON of the child: the exact line of each input, and `input_packages`.
+
+    Returns the plain error lines too: an input that the list lacks, and an input that the syntax tree does not show.
+    """
     compiled = json.loads(data)
     by_name = {i.name: i for i in found.inputs}
     listed = {i["name"] for i in compiled.get("inputs", [])}
@@ -421,6 +424,15 @@ def _merge(source: Path, data: bytes, found: Found, narhash: dict[str, str]) -> 
         f"{source.name}:{i.line}:1: the input `{i.name}` is not in `Machine(inputs=[...])`. Add it to the list."
         for i in found.inputs
         if i.name not in listed
+    ]
+    # An `Input` that the syntax tree does not show (built in a helper, or with a value that is not a literal) has no
+    # exact line and skips the pair check. Refuse it, at the line of `Machine(...)`.
+    lines += [
+        f"{item['source']}: the input `{item['name']}` is not written as "
+        f'Input("{item["name"]}", "URL", ...) in {source.name}. '
+        f"Write the Input call in {source.name} with literal values."
+        for item in compiled.get("inputs", [])
+        if item["name"] not in by_name
     ]
     for item in compiled.get("inputs", []):
         if item["name"] in by_name:
