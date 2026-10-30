@@ -933,8 +933,12 @@ def stage_vm(p: dict[str, dict], seed: Path, groups: list[str]) -> None:
     tar_to(PREP / "explain", "~/explain", exclude=(".basix",))
     ssh_env = {**os.environ, "NIX_SSHOPTS": " ".join(SSHOPT)}
     t = time.time()
-    done = subprocess.run(["nix", *FEATURES, "flake", "archive", "--to", "ssh-ng://root@127.0.0.1", "--no-write-lock-file", str(PREP / "S0")], env=ssh_env, capture_output=True, text=True)
+    # A source that the host fetched itself has no signature, so the VM takes it only with `--no-check-sigs` (as `copy_paths`).
+    archive = ["flake", "archive", "--no-check-sigs", "--to", "ssh-ng://root@127.0.0.1", "--no-write-lock-file", str(PREP / "S0")]
+    done = subprocess.run(["nix", *FEATURES, *archive], env=ssh_env, capture_output=True, text=True)
     log(f"== nix flake archive (the sources of the lock): rc={done.returncode}, {time.time() - t:.0f} s\n{done.stderr[-300:]}")
+    if done.returncode != 0:
+        raise SystemExit("nix flake archive failed: the VM has no sources of the lock, so every case would fail offline")
     copy_paths(sorted(p["S0"]["closure"] | p["S1"]["closure"] | p["S2"]["closure"]), "the compiler and the first states")
     # The system profile and the boot default of the running system: an installed machine has both.
     sh(f"nix-env -p /nix/var/nix/profiles/system --set $(readlink /run/current-system); mkdir -p {BOOT_DIR}; readlink /run/current-system > {BOOT_DIR}/boot-default", user="root", shown=False)
