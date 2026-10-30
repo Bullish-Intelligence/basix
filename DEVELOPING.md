@@ -95,7 +95,7 @@ gate.
 | Task | Runs | Rough time |
 | --- | --- | --- |
 | `setup:sync` | `uv sync --locked`, and the link to the locked `pynix` source | once per slot |
-| `check:lint` | `uv lock --check`, `ruff check`, `scripts/check_docs.py`, `scripts/check_pins.py` (self-test and layout), ShellCheck | 2 s |
+| `check:lint` | `uv lock --check`, `ruff check src tests scripts`, `scripts/check_docs.py`, `scripts/check_pins.py` (self-test and layout), ShellCheck | 2 s |
 | `check:format` | `ruff format --check` | under 1 s |
 | `check:types` | `ty check src tests` | 2 s |
 | `test:quick` | `pytest -n 4` (profile `quick` only) | 7 s |

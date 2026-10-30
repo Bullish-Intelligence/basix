@@ -56,6 +56,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import workdir  # noqa: E402
+
 from basix.units import ordering_cycles, summary  # noqa: E402
 
 

@@ -38,6 +38,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(ROOT / "src"))
 
 import vmlib  # noqa: E402
+
 from basix.install import _write_system  # noqa: E402
 from basix_config.stub import make_stub  # noqa: E402
 

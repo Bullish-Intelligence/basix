@@ -82,9 +82,9 @@ NEW_VERSION = f"{VERSION[1]}.{VERSION[2]}.{int(VERSION[3]) + 1}"
 sys.path.insert(0, str(ROOT / "src"))
 
 import vmlib  # noqa: E402
-from basix.units import ordering_cycles  # noqa: E402
 from pynix_native import discover_source  # noqa: E402
 
+from basix.units import ordering_cycles  # noqa: E402
 from basix_config.stub import make_stub  # noqa: E402
 
 FEATURES = ["--extra-experimental-features", "nix-command flakes"]

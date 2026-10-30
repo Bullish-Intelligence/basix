@@ -149,7 +149,7 @@ in
         set -o pipefail
         status=0
         uv lock --check || status=1
-        uv run --no-sync ruff check src tests || status=1
+        uv run --no-sync ruff check src tests scripts || status=1
         ${checkDocs} || status=1
         ${py} scripts/check_pins.py --selftest || status=1
         ${py} scripts/check_pins.py . || status=1
