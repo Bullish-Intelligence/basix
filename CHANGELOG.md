@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.5.1
+
+```text
+Basix 0.5.1 (pynix pynix-v0.7.0; nixpkgs e7439b6, 2026-10-08)
+Previous: v0.5.0. Commits since then: 4.
+- Version 0.5.1
+- Publish the python input pins in /etc/basix/python-pins.json
+- Pin pynix-v0.7.0
+- Compile: use the minix text for a NameError or ImportError in a helper
+```
+
 ## v0.5.0
 
 ```text
