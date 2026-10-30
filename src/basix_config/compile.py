@@ -31,7 +31,7 @@ import sys
 import tempfile
 import traceback
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 from pydantic import BaseModel, ValidationError
 from pynix_native import (
@@ -44,6 +44,8 @@ from pynix_native import (
     set_apply_command,
 )
 from pynix_native.inputs import input_package_name
+
+from basix_config.component import learner_path, set_workspace
 
 #: The command that makes the generated packages. The pair check and the package errors name it.
 COMMAND = "basix apply"
@@ -175,11 +177,59 @@ def _source_line(error: BaseException, name: str) -> int | None:
     return frames[-1].lineno if frames else None
 
 
+class Spot(NamedTuple):
+    """Where an error happened, in the deepest file of the learner."""
+
+    name: str  # the file name in the plain line: `system.py`, or `helpers/desk.py` for a helper module
+    tree: ast.Module  # the syntax tree of that file
+    line: int | None
+    entry: bool  # the file is the entry
+    origin: str  # ` (from system.py:7)` for a helper module, else empty
+
+
+def _from(name: str, line: int | None) -> str:
+    """The tail of a plain line for a file that is not the entry: the line of the entry that led to it."""
+    return f" (from {name}:{line})" if line else ""
+
+
+def _spot(error: BaseException, source: Path, tree: ast.Module, fallback: int | None = None) -> Spot:
+    """The deepest file of the learner in the traceback of `error`.
+
+    A helper module is a file below the workspace folder, or below `.basix/pynix` (the code of an input package).
+    When the deepest file is the entry, the line is the last line of the entry in the traceback. When it is a helper,
+    the line is the last line of that helper, and the tail names the last line of the entry (or `fallback`).
+    """
+    name, root = source.name, source.resolve().parent
+    deepest: tuple[str, Path, int | None] | None = None
+    entry_line: int | None = None
+    for frame in traceback.extract_tb(error.__traceback__):
+        path = Path(os.path.abspath(frame.filename))
+        if path.name == name:
+            deepest, entry_line = (name, source, frame.lineno), frame.lineno
+        elif (shown := learner_path(path, root)) is not None:
+            deepest = (shown, path, frame.lineno)
+    if deepest is None or deepest[0] == name:
+        return Spot(name, tree, deepest[2] if deepest else None, True, "")
+    try:
+        helper = ast.parse(deepest[1].read_text())
+    except (OSError, SyntaxError, ValueError):  # the helper changed or does not parse: keep the line of the entry
+        return Spot(name, tree, entry_line, True, "")
+    return Spot(deepest[0], helper, deepest[2], False, _from(name, entry_line or fallback))
+
+
 def _syntax(name: str, error: SyntaxError) -> list[str]:
     """One plain line for a Python syntax error. No traceback."""
     text = " ".join(str(error.msg).split())
     text += "" if text.endswith((".", "?")) else "."
     return [f"{name}:{error.lineno or 1}:{error.offset or 1}: syntax error: {text}"]
+
+
+def _helper_name(filename: object, source: Path) -> str | None:
+    """The name of a helper module of the learner (not the entry), or `None` for any other file."""
+    if not filename:
+        return None
+    path = Path(os.path.abspath(str(filename)))
+    return None if path.name == source.name else learner_path(path, source.resolve().parent)
 
 
 def report(source: Path, error: BaseException) -> list[str]:
@@ -196,6 +246,11 @@ def report(source: Path, error: BaseException) -> list[str]:
         return _syntax(name, error)
     if isinstance(error, OSError) and Path(str(error.filename or "")).name == name:
         return [f"{name}:1:1: cannot read the file: {error.strerror}."]
+    if isinstance(error, SyntaxError) and (shown := _helper_name(error.filename, source)):  # a helper does not parse
+        text = " ".join(str(error.msg).split())
+        return [
+            f"{shown}:{error.lineno or 1}:{error.offset or 1}: SyntaxError: {text}{_from(name, _source_line(error, name))}"
+        ]
     try:
         tree = ast.parse(source.read_text())
     except (
@@ -211,15 +266,19 @@ def report(source: Path, error: BaseException) -> list[str]:
     ):  # a capability failed inside `emit`: the traceback of the inner error has the line
         inner = error.error
         if isinstance(inner, ValidationError):
-            return _validation(name, tree, _source_line(inner, name), inner, f" (in {error.label})")
+            where = error.where.rpartition(":")
+            spot = _spot(inner, source, tree, int(where[2]) if where[0] == name and where[2].isdigit() else None)
+            lines = _validation(spot.name, spot.tree, spot.line, inner, f" (in {error.label})")
+            return [line + spot.origin for line in lines]
         return [f"{error.where}: the capability {error.label} failed: {type(inner).__name__}: {inner}"]
-    line = _source_line(error, name)
+    spot = _spot(error, source, tree)
+    display, tree, line = spot.name, spot.tree, spot.line  # the deepest file: the entry, else a helper module
     if isinstance(error, ValidationError):
-        return _validation(name, tree, line, error)
-    if isinstance(error, ImportError) and "cannot import name" in str(error):
+        return [text + spot.origin for text in _validation(display, tree, line, error)]
+    if isinstance(error, ImportError) and "cannot import name" in str(error) and spot.entry:
         return _unknown_name(name, tree, line, str(error).split("'")[1])
     if isinstance(error, PackageError):  # a package name that nixpkgs does not have, with "did you mean" (009-D19)
-        spot = next(
+        spot_node = next(
             (n for n in ast.walk(tree) if isinstance(n, ast.Attribute) and n.lineno == line and n.attr == error.word),
             None,
         )
@@ -227,22 +286,22 @@ def report(source: Path, error: BaseException) -> list[str]:
             (n for n in ast.walk(tree) if isinstance(n, ast.Constant) and n.lineno == line and n.value == error.word),
             None,
         )
-        if isinstance(spot, ast.Attribute) and spot.end_col_offset:
-            col = spot.end_col_offset - len(error.word) + 1
+        if isinstance(spot_node, ast.Attribute) and spot_node.end_col_offset:
+            col = spot_node.end_col_offset - len(error.word) + 1
         elif const is not None:
             col = const.col_offset + 2
         else:
             col = 1
-        return [f"{name}:{line or 1}:{col}: {error}"]
+        return [f"{display}:{line or 1}:{col}: {error}{spot.origin}"]
     if isinstance(error, AttributeError) and " has no class " in str(
         error
     ):  # a name of the `nixos` namespace that has no class
         word = str(error).split(" has no class ")[1].split(".")[0]
-        spot = next(
+        node = next(
             (n for n in ast.walk(tree) if isinstance(n, ast.Attribute) and n.lineno == line and n.attr == word), None
         )
-        col = (spot.end_col_offset - len(word) + 1) if spot and spot.end_col_offset else 1
-        return [f"{name}:{line or 1}:{col}: {error}"]
+        col = (node.end_col_offset - len(word) + 1) if node and node.end_col_offset else 1
+        return [f"{display}:{line or 1}:{col}: {error}{spot.origin}"]
     if isinstance(error, PriorityError):  # a wrapper of the advanced import (L128) used where it has no meaning
         call = next(
             (
@@ -252,10 +311,10 @@ def report(source: Path, error: BaseException) -> list[str]:
             ),
             None,
         )
-        return [f"{name}:{line or 1}:{call.col_offset + 1 if call else 1}: {error}"]
-    if isinstance(error, NameError) and error.name:
+        return [f"{display}:{line or 1}:{call.col_offset + 1 if call else 1}: {error}{spot.origin}"]
+    if isinstance(error, NameError) and error.name and spot.entry:
         return _unknown_name(name, tree, line, error.name)
-    return [f"{name}:{line or 1}: {type(error).__name__}: {error}"]
+    return [f"{display}:{line or 1}: {type(error).__name__}: {error}{spot.origin}"]
 
 
 def _warnings(source: Path) -> None:
@@ -266,7 +325,11 @@ def _warnings(source: Path) -> None:
         return
     tree = ast.parse(source.read_text())
     for where, index, keyword, text, value in cache.WARNINGS:
-        line = int(where.rpartition(":")[2])
+        file, _, number = where.rpartition(":")
+        line = int(number)
+        if file != source.name:  # a `Cache` built in a helper module: its line is a line of that file
+            print(f"{file}:{line}: warning: Cache.{keyword} {text}", file=sys.stderr)
+            continue
         calls = [
             n
             for n in ast.walk(tree)
@@ -324,6 +387,14 @@ def _interface_warnings(source: Path, machine: BaseModel) -> None:
 
 
 def run_entry(source: Path, out: Path, final: Path) -> int:
+    """The child: run the entry under the read audit and write the compiled JSON to `out`."""
+    try:
+        return _run_entry(source, out, final)
+    finally:
+        set_workspace(None)
+
+
+def _run_entry(source: Path, out: Path, final: Path) -> int:
     """The child: run the entry under the read audit and write the compiled JSON to `out`.
 
     `final` is the path of the JSON that the parent writes at the end. The audit skips its name in a folder listing.
@@ -332,6 +403,7 @@ def run_entry(source: Path, out: Path, final: Path) -> int:
 
     root = source.resolve().parent
     set_apply_command(COMMAND)
+    set_workspace(root)  # a site is a path below this folder, so an error in a helper module names its file
     sys.path.append(str(root / ".basix" / "pynix"))  # the generated input packages (009-D47)
     sys.path.append(str(root))  # a helper module of the workspace; the libraries come first
     try:

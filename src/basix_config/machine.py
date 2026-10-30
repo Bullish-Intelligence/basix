@@ -23,7 +23,7 @@ from pynix_os.top import Top
 from pynix_pkgs import Pkg
 
 from basix_config.cache import BUILT_IN, Cache, same_url
-from basix_config.component import Capability, ComponentError, Profile, learner_frame
+from basix_config.component import Capability, ComponentError, Profile, learner_frame, site_name
 from basix_config.fields import Account, ConsoleDevice, DiskId, Interface, Name, StateVersion
 from basix_config.options import Basix, Disk
 from basix_config.ports import Port, Ports, open_ports
@@ -199,7 +199,7 @@ class Machine(Plain):
 
     def model_post_init(self, context: object, /) -> None:
         self._origin = learner_frame()
-        self._where = f"{self._origin[0].name}:{self._origin[1]}" if self._origin else "unknown"
+        self._where = f"{site_name(self._origin[0])}:{self._origin[1]}" if self._origin else "unknown"
 
     def option_sites(self) -> list[str]:
         """The learner line of each item of `options=[...]`, so a conflict names the line of the item (`BSX-385`).
@@ -222,7 +222,7 @@ class Machine(Plain):
                 if keyword.arg == "options" and isinstance(keyword.value, ast.List | ast.Tuple):
                     items = keyword.value.elts
                     if len(items) == len(self.options):
-                        return [f"{path.name}:{item.lineno}" for item in items]
+                        return [f"{site_name(path)}:{item.lineno}" for item in items]
         return fallback
 
     def emit(self) -> Iterator[Model | NativeModule]:

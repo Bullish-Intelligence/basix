@@ -68,6 +68,30 @@ def test_a_field_shows_the_value_and_the_learner_line(tmp_path: Path, capsys: py
     ]
 
 
+def test_a_line_of_a_helper_module_shows_its_path(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    runner = FakeRunner()
+    answer(
+        runner,
+        known(
+            "networking.firewall.trustedInterfaces",
+            "helpers/net.py:4 (Machine)",
+            "comps/desk.py:12 (RemoteLogin)",
+            "/nix/store/0123456789abcdfghijklmnpqrsvwxyz-source/odd/x.py:3 (Machine)",
+            FIREWALL,
+            value=["lo"],
+        ),
+    )
+    code, out, err = run(workspace(tmp_path), "trusted_interfaces", runner, capsys)
+    assert (code, err) == (0, [])
+    assert out == [
+        'networking.firewall.trustedInterfaces = ["lo"]',
+        "  set by trusted_interfaces at helpers/net.py:4",
+        "  set by RemoteLogin at comps/desk.py:12",
+        "  set by NixOS (services/networking/firewall.nix)",
+        "  set by the module odd/x.py:3 (Machine)",
+    ]
+
+
 def test_one_nix_call_asks_for_all_paths(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     runner = FakeRunner()
     answer(

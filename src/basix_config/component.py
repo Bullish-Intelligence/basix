@@ -20,9 +20,67 @@ from pynix_native import NativeModule
 if TYPE_CHECKING:
     from basix_config.machine import Machine
 
-__all__ = ["Capability", "Component", "ComponentError", "Profile", "learner_frame", "learner_site"]
+__all__ = [
+    "Capability",
+    "Component",
+    "ComponentError",
+    "Profile",
+    "learner_frame",
+    "learner_path",
+    "learner_site",
+    "set_workspace",
+    "site_name",
+]
 
 _HERE = Path(os.path.abspath(__file__)).parent
+#: The folder of the entry file. The compile sets it. A site is a path below it.
+_WORKSPACE: Path | None = None
+#: A folder name that marks library code or a tool folder, never learner code.
+_NOT_LEARNER = frozenset(
+    {"pydantic", "nixdantic", "site-packages", "dist-packages", ".venv", ".devenv", ".direnv", ".git", ".jj", ".gitman"}
+)
+
+
+def set_workspace(root: Path | None) -> None:
+    """Name the folder of the entry file, so a site shows a path below it. `None` clears it."""
+    global _WORKSPACE
+    _WORKSPACE = root
+
+
+def _below(path: Path, root: Path) -> Path | None:
+    """The part of `path` below `root`. Try the path as written, then with the links followed."""
+    for candidate in (path, Path(os.path.realpath(path))):
+        try:
+            return candidate.relative_to(root)
+        except ValueError:
+            continue
+    return None
+
+
+def learner_path(path: Path, root: Path | None = None) -> str | None:
+    """The name of a file of the learner, or `None` for any other file.
+
+    Learner code is a file below the workspace folder. The name is the path below that folder, with `/` between the
+    parts (`helpers/desk.py`). Code of an input package is a file below `.basix/pynix`. Its name is the path below that
+    folder (`comps/desk.py`). The generated `pynix_*` packages, the libraries of Basix, and tool folders are not
+    learner code.
+    """
+    root = root or _WORKSPACE
+    if root is None or path.name.startswith("<") or _HERE in path.parents:
+        return None
+    below = _below(path, root)
+    if below is None or _NOT_LEARNER & set(below.parts):
+        return None
+    if below.parts[0] == ".basix":
+        if below.parts[1:2] != ("pynix",) or len(below.parts) < 4 or below.parts[2].startswith("pynix_"):
+            return None
+        below = Path(*below.parts[2:])
+    return below.as_posix()
+
+
+def site_name(path: Path) -> str:
+    """The name of a file in a `file:line` site: the path below the workspace folder, else the file name."""
+    return learner_path(path) or path.name
 
 
 def learner_frame() -> tuple[Path, int] | None:
@@ -40,9 +98,9 @@ def learner_frame() -> tuple[Path, int] | None:
 
 
 def learner_site() -> str:
-    """`file:line` of the learner line, as `learner_frame` finds it (the file name has no folder)."""
+    """`file:line` of the learner line, as `learner_frame` finds it (the file is a path below the workspace folder)."""
     found = learner_frame()
-    return f"{found[0].name}:{found[1]}" if found else "unknown"
+    return f"{site_name(found[0])}:{found[1]}" if found else "unknown"
 
 
 class Component(Plain):

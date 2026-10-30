@@ -19,8 +19,9 @@ from pynix_engine import Runner, trim_nix_error
 
 __all__ = ["explain"]
 
-#: A learner definition: the `_file` of a fragment is `system.py:7 (RemoteLogin)`.
-LEARNER = re.compile(r"^(?P<site>[^/\s]+:\d+) \((?P<label>[^)]+)\)$")
+#: A learner definition: the `_file` of a fragment is `system.py:7 (RemoteLogin)`. The file of a helper module has a
+#: folder: `helpers/desk.py:7 (RemoteLogin)`. A path that starts with `/` is a file of the store, not a learner site.
+LEARNER = re.compile(r"^(?P<site>[^/\s][^\s]*:\d+) \((?P<label>[^)]+)\)$")
 #: A file of the Nix store, and the path below the store folder.
 STORE = re.compile(r"^/nix/store/[a-z0-9]{32}-[^/]+/(?P<below>.+)$")
 #: The words of an option path: the characters that a Nix attribute name needs here. Nothing else reaches Nix.

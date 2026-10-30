@@ -117,6 +117,103 @@ class TestErrorLines:
         assert one(run_compile(tmp_path)) == "system.py:1:1: cannot read the file: No such file or directory."
 
 
+class TestHelperErrors:
+    """An error in a helper module names the helper file, then the line of `system.py` that led to it."""
+
+    ENTRY = "from basix_config import *\nfrom helpers.mk import make\nmachine = make()\n"
+    CAPABILITY = (
+        "from basix_config import *\n"
+        "from basix_config.component import Capability\n"
+        "from pynix_os.services.openssh import Openssh\n\n"
+        "class Ssh(Capability):\n"
+        "    def emit(self, machine):\n"
+        "        yield Openssh(enable=True, ports=[70000])\n"
+    )
+
+    def test_a_validation_error_names_the_helper(self, workspace) -> None:
+        helper = "from basix_config import Machine\n\ndef make():\n    return Machine(name='a', user=42, disk=None)\n"
+        assert one(workspace(self.ENTRY, {"helpers/mk.py": helper})) == (
+            "helpers/mk.py:4:35: Machine.user must be an account name "
+            "(a lower case letter, then up to 31 lower case letters, digits, or '-'), found 42. (from system.py:3)"
+        )
+
+    def test_the_real_command_names_the_helper(self, command) -> None:
+        text = "from basix_config import *\nimport mymod\nmachine = Machine(name='a', user='b', disk=None)\n"
+        assert one(command(text, {"mymod.py": "X = 1\nraise ValueError('boom')\n"})) == (
+            "mymod.py:2: ValueError: boom (from system.py:2)"
+        )
+
+    def test_a_plain_error_names_the_helper(self, workspace) -> None:
+        text = "from basix_config import *\nimport mymod\nmachine = Machine(name='a', user='b', disk=None)\n"
+        assert one(workspace(text, {"mymod.py": "X = 1\nraise ValueError('boom')\n"})) == (
+            "mymod.py:2: ValueError: boom (from system.py:2)"
+        )
+
+    def test_an_error_in_a_function_names_the_call_of_the_entry(self, workspace) -> None:
+        text = "from basix_config import *\nimport mymod\n\nvalue = mymod.go()\nmachine = Machine(name='a', user='b', disk=None)\n"
+        helper = "def go():\n    return 1 / 0\n"
+        assert one(workspace(text, {"mymod.py": helper})) == (
+            "mymod.py:2: ZeroDivisionError: division by zero (from system.py:4)"
+        )
+
+    def test_a_syntax_error_in_a_helper(self, workspace) -> None:
+        text = (
+            "from basix_config import *\nfrom helpers import mymod\nmachine = Machine(name='a', user='b', disk=None)\n"
+        )
+        compiled = workspace(text, {"helpers/mymod.py": "x = 1 +\n"})
+        assert one(compiled) == "helpers/mymod.py:1:8: SyntaxError: invalid syntax (from system.py:2)"
+
+    def test_a_wrong_name_in_a_helper_gets_no_basix_advice(self, workspace) -> None:
+        text = "from basix_config import *\nimport mymod\nmachine = Machine(name='a', user='b', disk=None)\n"
+        compiled = workspace(text, {"mymod.py": "from basix_config import RemoteLogn\n"})
+        line = one(compiled)
+        assert line.startswith("mymod.py:1: ImportError: cannot import name 'RemoteLogn'")
+        assert line.endswith("(from system.py:2)")
+        assert "Did you mean" not in line
+        compiled = workspace(text, {"mymod.py": "value = missing\n"})
+        assert one(compiled) == "mymod.py:1: NameError: name 'missing' is not defined (from system.py:2)"
+
+    def test_the_entry_keeps_its_own_lines(self, workspace) -> None:
+        text = "from basix_config import *\nimport mymod\nmachine = Machine(name='a', user=42, disk=None)\n"
+        assert one(workspace(text, {"mymod.py": "X = 1\n"})).startswith("system.py:3:34: Machine.user must be")
+
+    def test_a_capability_of_a_helper_names_the_helper(self, workspace) -> None:
+        text = "from basix_config import *\nfrom helpers.ssh import Ssh\nmachine = Machine(name='a', user='b', disk=None, capabilities=[Ssh()])\n"
+        assert one(workspace(text, {"helpers/ssh.py": self.CAPABILITY})) == (
+            "helpers/ssh.py:7:43: Openssh.ports[0] must be 16 bit unsigned integer; between 0 and 65535 "
+            "(both inclusive), found 70000. (NixOS option services.openssh.ports) (in Ssh) (from system.py:3)"
+        )
+
+    def test_the_code_of_an_input_package_is_named_below_the_package_folder(self, workspace) -> None:
+        text = "from basix_config import *\nfrom comps import desk\nmachine = Machine(name='a', user='b', disk=None)\n"
+        compiled = workspace(text, {".basix/pynix/comps/desk.py": "X = 1\nraise ValueError('no desk')\n"})
+        assert one(compiled) == "comps/desk.py:2: ValueError: no desk (from system.py:2)"
+
+    def test_a_generated_package_is_not_learner_code(self, workspace) -> None:
+        text = "from basix_config import *\nimport pynix_gen\nmachine = Machine(name='a', user='b', disk=None)\n"
+        compiled = workspace(text, {".basix/pynix/pynix_gen/__init__.py": "raise ValueError('generated')\n"})
+        assert one(compiled) == "system.py:2: ValueError: generated"
+
+    def test_a_site_in_the_json_is_a_path_below_the_workspace(self, workspace) -> None:
+        helper = (
+            "from basix_config import Machine, RemoteLogin\n\n"
+            "def make():\n"
+            "    return Machine(name='a', user='b', disk=None, capabilities=[RemoteLogin()])\n"
+        )
+        compiled = workspace(self.ENTRY, {"helpers/mk.py": helper})
+        assert compiled.code == 0, compiled.err
+        sources = {f["source"] for f in compiled.data["fragments"]}
+        assert "helpers/mk.py:4 (Machine)" in sources
+        assert "helpers/mk.py:4 (RemoteLogin)" in sources
+
+    def test_a_site_in_the_entry_is_unchanged(self, workspace) -> None:
+        compiled = workspace(machine_text("capabilities=[RemoteLogin()],"))
+        assert compiled.code == 0, compiled.err
+        sources = {f["source"] for f in compiled.data["fragments"]}
+        assert "system.py:3 (Machine)" in sources
+        assert "system.py:7 (RemoteLogin)" in sources
+
+
 class TestPackages:
     """The name of a package is checked against the name list of the pinned nixpkgs (009-D19)."""
 
@@ -174,6 +271,16 @@ class TestCacheWarning:
         assert compiled.code == 0
         assert compiled.lines == [
             "system.py:7:19: warning: Cache.url starts with http://, so the traffic is not encrypted. "
+            "Nix still checks the signature of every file. Use http only on your own network."
+        ]
+
+    def test_a_cache_in_a_helper_names_the_helper(self, workspace) -> None:
+        helper = f'from basix_config import Cache\nCACHE = Cache("http://example.cachix.org", "{KEY}")\n'
+        text = "from basix_config import *\nfrom helpers.c import CACHE\nmachine = Machine(name='a', user='b', disk=None, caches=[CACHE])\n"
+        compiled = workspace(text, {"helpers/c.py": helper})
+        assert compiled.code == 0, compiled.err
+        assert compiled.lines == [
+            "helpers/c.py:2: warning: Cache.url starts with http://, so the traffic is not encrypted. "
             "Nix still checks the signature of every file. Use http only on your own network."
         ]
 
