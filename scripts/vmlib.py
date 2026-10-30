@@ -173,7 +173,12 @@ def _gib(number: str, unit: str) -> float:
 
 
 def root_usage(logs: Logs) -> tuple[float, float]:
-    """Return unallocated GiB and the metadata use in percent of the root file system."""
+    """Return unallocated GiB and the metadata use in percent of the root file system.
+
+    When `/` is not btrfs, it has neither: return the free GiB of `/` and 0 % metadata.
+    """
+    if root_fstype() != "btrfs":
+        return shutil.disk_usage("/").free / 2**30, 0.0
     done = logs.run("btrfs-usage", ["btrfs", "filesystem", "usage", "/"])
     unallocated = re.search(r"Device unallocated:\s+([\d.]+)(\w+)", done.stdout)
     metadata = re.search(r"Metadata,\w+: Size:[\d.]+\w+, Used:[\d.]+\w+ \(([\d.]+)%\)", done.stdout)
@@ -182,12 +187,30 @@ def root_usage(logs: Logs) -> tuple[float, float]:
     return _gib(*unallocated.groups()), float(metadata.group(1))
 
 
+def root_fstype() -> str:
+    """The file system type of `/`: the last mount of `/` in `/proc/mounts`."""
+    found = ""
+    for line in Path("/proc/mounts").read_text().splitlines():
+        fields = line.split()
+        if len(fields) > 2 and fields[1] == "/":
+            found = fields[2]
+    return found
+
+
 def disk_guard(logs: Logs, label: str) -> None:
     """Stop before a build when metadata is above 90 % while unallocated space is under 15 GiB.
 
     This is the rule of the plan ("Rules for every slice"). Low unallocated space alone only
-    prints a warning, because other work on the host also uses it.
+    prints a warning, because other work on the host also uses it. When `/` is not btrfs, it has no
+    metadata or unallocated space: the guard then stops when free space on `/` is under 15 GiB.
     """
+    fstype = root_fstype()
+    if fstype != "btrfs":
+        free = shutil.disk_usage("/").free / 2**30
+        logs.note(f"disk guard {label}: / is {fstype or 'unknown'}, free {free:.2f} GiB")
+        if free < MIN_UNALLOCATED_GIB:
+            raise Stop(f"stop: only {free:.2f} GiB free on / before {label}")
+        return
     for attempt in (1, 2):
         free, meta = root_usage(logs)
         logs.note(f"disk guard {label} try {attempt}: unallocated {free:.2f} GiB, metadata {meta:.1f} %")

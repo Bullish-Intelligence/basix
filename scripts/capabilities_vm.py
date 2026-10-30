@@ -32,7 +32,7 @@ Each case is a script in the shared directory `xchg` of the VM. The guest runs i
 variable `BASIX_USER` holds the account name. A case passes when the script exits 0.
 
 The check stops before a build when metadata is above 90 % and unallocated space is under 15 GiB
-(`vmlib.disk_guard`). Run `btrfs filesystem usage /` first.
+(`vmlib.disk_guard`). On a host whose `/` is not btrfs, it stops when `/` has under 15 GiB free.
 """
 
 from __future__ import annotations

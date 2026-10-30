@@ -138,7 +138,7 @@ testee verify opt:basix-editor         # editor help in a fresh workspace: ty co
   the scripts also write no bytecode (`PYTHONDONTWRITEBYTECODE`, `python -B`).
 - VM files and scratch go under `$BASIX_WORK` (default `${XDG_CACHE_HOME:-~/.cache}/basix/NAME`; `scripts/workdir.py` decides; `BASIX_WORK_BASE` replaces the part before `NAME`). Testee passes no variable from your shell to a task, so write `export BASIX_WORK_BASE=...` and other machine facts in `~/.config/basix/dev.env`; the opt-in tasks source it. Raw logs go
   under `$BASIX_LOGS` (default `~/.local/state/basix/NAME/logs`). Check `btrfs filesystem usage /` before an image
-  build.
+  build (`df -h /` when `/` is not btrfs). The disk guard of the VM checks reads the same numbers.
 
 ## Fast loop
 

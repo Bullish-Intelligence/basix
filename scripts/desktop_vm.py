@@ -28,7 +28,7 @@ fails. The screens are in `$BASIX_LOGS/desktop_vm/TIME/`. QEMU shows no real GPU
 real hardware.
 
 The check stops before a build when metadata is above 90 % and unallocated space is under 15 GiB (`vmlib.disk_guard`).
-Run `btrfs filesystem usage /` first. Do not run it beside another VM check.
+On a host whose `/` is not btrfs, it stops when `/` has under 15 GiB free. Do not run it beside another VM check.
 """
 
 from __future__ import annotations
