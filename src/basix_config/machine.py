@@ -121,7 +121,7 @@ class Machine(Plain):
     ] = []
     """Binary caches that the machine may use besides cache.nixos.org, for example `Cache("https://example.cachix.org", "example.cachix.org-1:AAAA...=")`."""
     inputs: list[Input] = []
-    """Extra flake inputs, for example `Input("nirinit", "github:amaanq/nirinit", modules=["nirinit"])`."""
+    """Extra flake inputs, for example `Input("nirinit", "github:amaanq/nirinit", modules=["nirinit"])`. Add `python="src"` to import the Python code of an input in this file: `Input("comps", "github:me/comps", python="src")`, then `from comps import NAME`. The lock pins the code. It changes only after `basix update comps`. The code may import the standard library, pydantic, nixdantic, pynix_pkgs, pynix_native, basix_config, and pynix_os. No other third-party package is available. A package that a minix home shares keeps its shared part free of basix_config and minix_config. Each layer pins its own revision."""
     options: list[
         Annotated[
             Model,
@@ -170,7 +170,7 @@ class Machine(Plain):
                 serial_console: The serial console of the machine, for example "ttyS0". The install writes it when the live system booted with one.
                 user_ports: Ports that you open, for example `Port(8080)` (every link), `Ports(8000, 8099)`, or `Port(22, interface="tailscale0")` (one link).
                 caches: Binary caches that the machine may use besides cache.nixos.org, for example `Cache("https://example.cachix.org", "example.cachix.org-1:AAAA...=")`.
-                inputs: Extra flake inputs, for example `Input("nirinit", "github:amaanq/nirinit", modules=["nirinit"])`.
+                inputs: Extra flake inputs, for example `Input("nirinit", "github:amaanq/nirinit", modules=["nirinit"])`. Add `python="src"` to import the Python code of an input in this file: `Input("comps", "github:me/comps", python="src")`, then `from comps import NAME`. The lock pins the code. It changes only after `basix update comps`. The code may import the standard library, pydantic, nixdantic, pynix_pkgs, pynix_native, basix_config, and pynix_os. No other third-party package is available. A package that a minix home shares keeps its shared part free of basix_config and minix_config. Each layer pins its own revision.
                 options: NixOS options that no capability covers, written with a class of `nixos`.
                 native_modules: Native NixOS module files of the workspace folder, for example `NativeModule("fans.nix")`.
                 values: Values that a native module reads as `machine.values.NAME`.

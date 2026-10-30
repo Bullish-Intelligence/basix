@@ -29,6 +29,10 @@ and Home Manager. The learner path holds no Vendomat and no devenv. devenv is th
 - Python runs at compile time only, never inside Nix evaluation. `basix apply` compiles `system.py` to `system.json`.
   A staleness guard stops an evaluation when `system.py` or a file that it read has changed since the compile.
 - The learner word for a named function is "capability" (`RemoteLogin()`). The learner writes `pkgs.NAME` for a package.
+- Python code from outside the workspace enters only through `Input(name, url, python="FOLDER")` (021-D1). The lock pins
+  the code. It may import the standard library, `pydantic`, `nixdantic`, `pynix_pkgs`, `pynix_native`, `basix_config`,
+  and `pynix_os`. No other third-party package is supported. A package that both layers use must not read the other
+  layer: its shared part imports neither `basix_config` nor `minix_config`.
 - A hatch for a setting that has no field: first a field, then `options=[...]` with a generated class, then
   `native_modules=[NativeModule("file.nix")]`.
 - Basix owns `install` and the disk guard. Every disko disk keeps `destroy = false` and the guard hook. Evaluation fails

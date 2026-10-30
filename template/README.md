@@ -10,6 +10,7 @@ This folder holds the settings of your machine. Each change goes in one place.
   A program for every account of the machine goes here too: `programs=[Program(pkgs.htop)]`. `system.py` names the disk by its `/dev/disk/by-id/` name, which holds the serial number of the disk.
 - When a setting has no field in `system.py`, use the hatches in this order: a field, then `options=[...]` with a
   NixOS class (`nixos.NAME(...)`), then `native_modules=[NativeModule("fans.nix")]` with a `.nix` file of this folder.
+- Python code from another repository: list `Input("comps", "github:me/comps", python="src")` in `inputs=[...]`, then write `from comps import NAME`. `flake.lock` pins the code. It changes only after `basix update comps`.
 
 Your editor completes the names and shows the rule of each field: start `nix run --inputs-from . basix#editor` as its
 language server. A mistake gives one line with the file, the line, and the column.
@@ -28,8 +29,7 @@ Run these in this folder, or set `BASIX_WORKSPACE` to it. Type your password whe
 Do not edit these. `basix apply` writes them again.
 
 - `flake.nix`, `flake.lock`: the pins of the versions you use.
-- `system.json`: your `system.py`, compiled.
-- `facter.json`: the hardware report that the install made.
+- `system.json`: your `system.py`, compiled. `facter.json`: the hardware report that the install made.
 
 ## Settings that have no file
 
