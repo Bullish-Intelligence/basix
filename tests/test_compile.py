@@ -170,8 +170,37 @@ class TestHelperErrors:
         assert line.startswith("mymod.py:1: ImportError: cannot import name 'RemoteLogn'")
         assert line.endswith("(from system.py:2)")
         assert "Did you mean" not in line
-        compiled = workspace(text, {"mymod.py": "value = missing\n"})
-        assert one(compiled) == "mymod.py:1: NameError: name 'missing' is not defined (from system.py:2)"
+        assert line == "mymod.py:1: ImportError: cannot import name 'RemoteLogn' from 'basix_config' (from system.py:2)"
+
+    def test_a_missing_import_line_in_a_helper_names_the_helper(self, workspace) -> None:
+        """The same text as minix: a Basix name that the helper does not import is "not imported"."""
+        text = "from basix_config import *\nimport mymod\nmachine = Machine(name='a', user='b', disk=None)\n"
+        assert one(workspace(text, {"mymod.py": "OWNER = pkgs.git\n"})) == (
+            "mymod.py:1:9: `pkgs` is not imported. Add the line `from basix_config import *` at the top of "
+            "mymod.py. (from system.py:2)"
+        )
+
+    def test_another_name_error_in_a_helper_names_the_helper(self, workspace) -> None:
+        text = "from basix_config import *\nimport mymod\nmachine = Machine(name='a', user='b', disk=None)\n"
+        assert one(workspace(text, {"mymod.py": "value = missing\n"})) == (
+            "mymod.py:1:9: `missing` is not defined in mymod.py. The names you defined are: value. (from system.py:2)"
+        )
+
+    def test_a_failing_import_in_a_helper_names_the_helper(self, workspace) -> None:
+        text = "from basix_config import *\nimport mymod\nmachine = Machine(name='a', user='b', disk=None)\n"
+        assert one(workspace(text, {"mymod.py": "import nonesuch_module\n"})) == (
+            "mymod.py:1: ModuleNotFoundError: No module named 'nonesuch_module' (from system.py:2)"
+        )
+
+    def test_a_missing_import_line_in_the_entry_is_not_imported(self, workspace) -> None:
+        assert one(workspace("value = pkgs.git\n")) == (
+            "system.py:1:9: `pkgs` is not imported. Add the line `from basix_config import *` at the top of system.py."
+        )
+
+    def test_another_name_error_in_the_entry_is_not_defined(self, workspace) -> None:
+        assert one(workspace("from basix_config import *\nvalue = missing\n")) == (
+            "system.py:2:9: `missing` is not defined in system.py. The names you defined are: value."
+        )
 
     def test_the_entry_keeps_its_own_lines(self, workspace) -> None:
         text = "from basix_config import *\nimport mymod\nmachine = Machine(name='a', user=42, disk=None)\n"

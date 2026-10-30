@@ -25,6 +25,7 @@ import difflib
 import hashlib
 import json
 import os
+import re
 import runpy
 import subprocess
 import sys
@@ -154,11 +155,10 @@ def _validation(name: str, tree: ast.Module, line: int | None, error: Validation
 
 
 def _unknown_name(name: str, tree: ast.Module, line: int | None, missing: str) -> list[str]:
+    """The plain line for a name that the file lacks. `name` and `tree` are of the file that failed (entry or helper)."""
     import basix_config
 
-    hidden = {"ComponentError", "NativeModule", "ConfigRef", "Native", "Package", "Text", "OWN"}
-    known = sorted(n for n in basix_config.__all__ if n[:1].isupper() and n not in hidden)
-    close = difflib.get_close_matches(missing, known, n=1)
+    assigned = [t.id for n in ast.walk(tree) if isinstance(n, ast.Assign) for t in n.targets if isinstance(t, ast.Name)]
     spot = next(
         (
             n
@@ -167,9 +167,28 @@ def _unknown_name(name: str, tree: ast.Module, line: int | None, missing: str) -
         ),
         None,
     )
-    advice = f" Did you mean `{close[0]}`?" if close else ""
     col = getattr(spot, "col_offset", 0) + 1
+    if missing in basix_config.__all__:  # a Basix name that the file does not import (`pkgs`, `Machine`)
+        return [
+            f"{name}:{line or 1}:{col}: `{missing}` is not imported. "
+            f"Add the line `from basix_config import *` at the top of {name}."
+        ]
+    if missing[:1].islower():  # a name of the learner (a variable), not a name of Basix
+        close = difflib.get_close_matches(missing, assigned, n=1)
+        advice = f" Did you mean `{close[0]}`?" if close else ""
+        return [
+            f"{name}:{line or 1}:{col}: `{missing}` is not defined in {name}.{advice}"
+            f" The names you defined are: {', '.join(assigned) or 'none'}."
+        ]
+    hidden = {"ComponentError", "NativeModule", "ConfigRef", "Native", "Package", "Text", "OWN"}
+    known = sorted(n for n in basix_config.__all__ if n[:1].isupper() and n not in hidden)
+    close = difflib.get_close_matches(missing, known, n=1)
+    advice = f" Did you mean `{close[0]}`?" if close else ""
     return [f"{name}:{line or 1}:{col}: `{missing}` is not a Basix name.{advice} The names are: {', '.join(known)}."]
+
+
+#: The path that Python adds to "cannot import name".
+_PATH_TAIL = re.compile(r" \(.*\)$")
 
 
 def _source_line(error: BaseException, name: str) -> int | None:
@@ -275,7 +294,9 @@ def report(source: Path, error: BaseException) -> list[str]:
     display, tree, line = spot.name, spot.tree, spot.line  # the deepest file: the entry, else a helper module
     if isinstance(error, ValidationError):
         return [text + spot.origin for text in _validation(display, tree, line, error)]
-    if isinstance(error, ImportError) and "cannot import name" in str(error) and spot.entry:
+    if isinstance(error, ImportError) and "cannot import name" in str(error):
+        if not spot.entry:  # the import is in a helper: the names of Basix are not the cause
+            return [f"{display}:{line or 1}: ImportError: {_PATH_TAIL.sub('', str(error))}{spot.origin}"]
         return _unknown_name(name, tree, line, str(error).split("'")[1])
     if isinstance(error, PackageError):  # a package name that nixpkgs does not have, with "did you mean" (009-D19)
         spot_node = next(
@@ -312,8 +333,8 @@ def report(source: Path, error: BaseException) -> list[str]:
             None,
         )
         return [f"{display}:{line or 1}:{call.col_offset + 1 if call else 1}: {error}{spot.origin}"]
-    if isinstance(error, NameError) and error.name and spot.entry:
-        return _unknown_name(name, tree, line, error.name)
+    if isinstance(error, NameError) and error.name:
+        return [text + spot.origin for text in _unknown_name(display, tree, line, error.name)]
     return [f"{display}:{line or 1}: {type(error).__name__}: {error}{spot.origin}"]
 
 
