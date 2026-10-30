@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.4.4
+
+```text
+Basix 0.4.4 (pynix pynix-v0.5.0; nixpkgs e7439b6, 2026-10-08)
+Previous: v0.4.3. Commits since then: 3.
+- Version 0.4.4
+- Let basix update, apply, and undo run in a git worktree
+- Pin pynix-v0.5.0
+```
+
 ## v0.4.3
 
 ```text
