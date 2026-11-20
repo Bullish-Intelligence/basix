@@ -90,7 +90,7 @@ QUIET = iv.QUIET_STALL_S
 # What the scratch copy of the checked tree leaves out: state of tools, caches, notes, and links of the workspace.
 SKIP_TOP = {
     ".git", ".jj", ".gitman", ".devenv", ".devenv.flake.nix", ".direnv", ".venv", ".pytest_cache", ".ruff_cache",
-    ".mypy_cache", ".testee", ".agents", ".claude", ".copyroom", ".copyroom-local.json", ".scratch", ".loci", "devenv.local.nix",
+    ".mypy_cache", ".testee", ".agents", ".claude", ".copyroom", ".scratch", ".loci", "devenv.local.nix",
     "build", "dist", "result",
 }  # fmt: skip
 # The line that the changelog of the scratch pynix tag names. Its form is the form of `pynix.changelog` (a type change).

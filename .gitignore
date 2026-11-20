@@ -33,7 +33,6 @@ __pycache__/
 .claude/settings.local.json
 .loci
 .basix/
-.copyroom-local.json
 .envrc
 .devman
 .worktrees
