@@ -37,3 +37,4 @@ __pycache__/
 .envrc
 .devman
 .worktrees
+/.workspaces/
