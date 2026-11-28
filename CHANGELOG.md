@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.5.2
+
+```text
+Basix 0.5.2 (pynix pynix-v0.7.0; nixpkgs e7439b6, 2026-10-08)
+Previous: v0.5.1. Commits since then: 6.
+- Version 0.5.2
+- Read the inputs of a flake input from the last JSON line, and keep a known follows line
+- Drop the CopyRoom 0.8 marker name .copyroom-local.json from the ignore list and release excludes
+- Ignore projectman workspaces
+- Lint the scripts folder and sort its imports
+- Test the basix-try refusal of a systemd ordering cycle
+```
+
 ## v0.5.1
 
 ```text
