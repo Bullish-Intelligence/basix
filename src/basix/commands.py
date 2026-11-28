@@ -45,6 +45,7 @@ from basix.release import (
     tag_name,
 )
 from basix.workspace import environment_home, find_workspace, tilde
+from basix_config.jsonout import last_json_string
 from basix_config.stub import DEFAULT_BASIX_URL
 
 
@@ -135,11 +136,7 @@ def locked_source(session: Session, lock: Mapping[str, Any], *names: str) -> str
     if expr is None:
         return None
     result = session.run(["nix", "eval", "--json", "--expr", expr], quiet=True)
-    try:
-        path = json.loads(result.out[result.out.index('"') :]) if result.code == 0 else None
-    except ValueError:
-        return None
-    return path if isinstance(path, str) else None
+    return last_json_string(result.out) if result.code == 0 else None
 
 
 def print_changelog(

@@ -2,15 +2,28 @@
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
 from pathlib import Path
+from typing import cast
 
 import pytest
+from pynix_engine import Session
+from pynix_engine.runner import Result
 from pynix_native import Found, discover_source
 
-from basix_config.stub import DEFAULT_BASIX_URL, input_list_expr, make_stub, nix_input_list, write_stub
+from basix.compile import nix_inputs
+from basix_config.jsonout import last_json_list, last_json_string
+from basix_config.stub import (
+    DEFAULT_BASIX_URL,
+    input_list_expr,
+    kept_follows,
+    make_stub,
+    nix_input_list,
+    write_stub,
+)
 
 PLAIN = """\
 # Managed by Basix. Do not edit.
@@ -253,3 +266,99 @@ def test_the_input_list_reads_a_flake_in_a_subdirectory(tmp_path: Path) -> None:
 def test_the_default_channel_is_the_branch_release() -> None:
     # 010-D54: `release` follows v2. The alias `release-v2` is not the default.
     assert DEFAULT_BASIX_URL.endswith("?ref=release")
+
+
+# The runner joins stderr to stdout. Git prints a fetch note with a `[` before the answer of `nix eval`.
+
+FETCH_NOTE = "From ssh://github.com/X/Y\n * [new tag]         v0.3.1     -> v0.3.1\n"
+
+
+def test_the_answer_after_a_fetch_note_is_read() -> None:
+    assert last_json_list(FETCH_NOTE + '["nixpkgs","sops-nix"]\n') == ["nixpkgs", "sops-nix"]
+    assert last_json_list('["nixpkgs"]\n' + FETCH_NOTE) == ["nixpkgs"]
+    assert last_json_list(FETCH_NOTE + "[]\n") == []
+
+
+def test_output_with_no_answer_gives_none() -> None:
+    assert last_json_list(FETCH_NOTE) is None
+    assert last_json_list("") is None
+    assert last_json_list("[1, 2]\n[broken\n") is None  # not a list of strings
+
+
+def test_a_string_answer_after_a_note_with_a_quote() -> None:
+    assert last_json_string('note "quoted" here\n"/nix/store/abc-source"\n') == "/nix/store/abc-source"
+    assert last_json_string("no answer\n") is None
+
+
+class FakeSession:
+    """Only `run` is used by `nix_inputs`."""
+
+    def __init__(self, *results: Result) -> None:
+        self.results = list(results)
+        self.argvs: list[list[str]] = []
+
+    def run(self, argv: list[str], **_: object) -> Result:
+        self.argvs.append(argv)
+        return self.results.pop(0)
+
+
+def test_nix_inputs_reads_the_list_after_a_fetch_note() -> None:
+    session = FakeSession(Result(0, FETCH_NOTE + '["nixpkgs","sops-nix"]\n'))
+    assert nix_inputs(cast(Session, session), "git+ssh://github.com/X/Y?ref=refs/tags/v0.3.1") == [
+        "nixpkgs",
+        "sops-nix",
+    ]
+    assert "--offline" in session.argvs[0]
+
+
+def test_nix_inputs_goes_on_to_the_online_try_when_the_offline_output_has_no_answer() -> None:
+    session = FakeSession(Result(0, FETCH_NOTE), Result(0, '["nixpkgs"]\n'))
+    assert nix_inputs(cast(Session, session), "github:X/Y") == ["nixpkgs"]
+    assert [("--offline" in argv) for argv in session.argvs] == [True, False]
+
+
+def test_nix_inputs_gives_none_for_output_with_no_answer() -> None:
+    session = FakeSession(Result(0, FETCH_NOTE), Result(0, FETCH_NOTE))
+    assert nix_inputs(cast(Session, session), "github:X/Y") is None
+
+
+SECRETS = 'Input("nix-secrets", "git+ssh://git@github.com/o/nix-secrets?ref=refs/tags/v0.3.1")'
+
+
+def test_the_stub_keeps_an_existing_follows_line_when_the_inputs_are_unknown() -> None:
+    entry = found(SECRETS)
+    before = make_stub(entry, inspect=lambda url: ["nixpkgs", "sops-nix"]).text
+    assert 'inputs.nix-secrets.inputs.nixpkgs.follows = "nixpkgs";' in before
+    stub = make_stub(entry, inspect=lambda url: None, kept=kept_follows(before, None))
+    assert stub.text == before
+    assert len(stub.notes) == 1
+    assert stub.notes[0].startswith("WARNING system.py:1:")
+
+
+def test_the_stub_keeps_a_follows_line_that_only_the_lock_has() -> None:
+    lock = json.dumps(
+        {
+            "root": "root",
+            "nodes": {
+                "root": {"inputs": {"nix-secrets": "nix-secrets", "other": "other"}},
+                "nix-secrets": {"inputs": {"nixpkgs": ["nixpkgs"]}},
+                "other": {"inputs": {"nixpkgs": "nixpkgs_2"}},  # its own nixpkgs: not a follow
+            },
+        }
+    )
+    assert kept_follows(None, lock) == {"nix-secrets"}
+    text = make_stub(found(SECRETS), inspect=lambda url: None, kept=kept_follows(None, lock)).text
+    assert 'inputs.nix-secrets.inputs.nixpkgs.follows = "nixpkgs";' in text
+
+
+def test_the_stub_adds_no_follows_line_when_the_inputs_are_unknown_and_nothing_is_kept() -> None:
+    stub = make_stub(found(SECRETS), inspect=lambda url: None)
+    assert "follows" not in stub.text.split("inputs.nix-secrets.url", 1)[1]
+    assert stub.notes == (
+        "system.py:1: could not read the inputs of `nix-secrets`, so the stub has no follows line for it",
+    )
+
+
+def test_a_bad_lock_text_keeps_nothing() -> None:
+    assert kept_follows("# x\n", "not json") == frozenset()
+    assert kept_follows(None, None) == frozenset()

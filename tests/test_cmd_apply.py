@@ -532,6 +532,28 @@ def test_an_input_in_system_py_rewrites_the_stub_locks_and_makes_the_packages(se
     assert ".basix" not in setup.git("ls-files")
 
 
+def test_an_unreadable_input_list_keeps_the_follows_line_of_the_stub_and_warns(setup: Setup) -> None:
+    """The nix-secrets case: the read of the inputs failed, and the stub must not lose `nixpkgs.follows`."""
+    (setup.ws / "system.py").write_text(ENTRY + INPUT.split("\n\n", 1)[1])
+    assert apply(setup) == 0, setup.lines
+    setup.ctx.read_inputs = lambda url: None
+    setup.lines.clear()
+    changed = INPUT.split("\n\n", 1)[1].replace('modules=["nirinit"]', 'modules=["nirinit", "more"]')
+    (setup.ws / "system.py").write_text(ENTRY + changed)
+    assert apply(setup) == 0, setup.lines
+    stub = (setup.ws / "flake.nix").read_text()
+    assert 'inputs.nirinit.inputs.nixpkgs.follows = "nixpkgs";' in stub
+    assert '"nirinit" "more"' in stub  # the stub did change, so the keep is not an accident of "no rewrite"
+    assert any(line.startswith("WARNING") and "keeps the `nixpkgs` follows line" in line for line in setup.lines)
+
+
+def test_an_unreadable_input_list_with_no_earlier_follows_line_writes_none(setup: Setup) -> None:
+    setup.ctx.read_inputs = lambda url: None
+    (setup.ws / "system.py").write_text(ENTRY + INPUT.split("\n\n", 1)[1])
+    assert apply(setup) == 0, setup.lines
+    assert "follows" not in (setup.ws / "flake.nix").read_text().split("inputs.nirinit.url", 1)[1]
+
+
 def test_an_unchanged_stub_needs_no_lock_but_the_input_packages_are_built_on_every_run(setup: Setup) -> None:
     (setup.ws / "system.py").write_text(ENTRY + INPUT.split("\n\n", 1)[1])
     assert apply(setup) == 0, setup.lines

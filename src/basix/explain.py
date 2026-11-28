@@ -230,7 +230,7 @@ def _evaluate(folder: Path, machine: str, paths: list[str], runner: Runner) -> l
             try:
                 return json.loads(line)
             except json.JSONDecodeError:
-                break
+                continue
     return "Nix gave no answer."
 
 

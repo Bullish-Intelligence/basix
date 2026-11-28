@@ -17,7 +17,8 @@ from pynix_native import DiscoveryError, Found, discover
 
 from basix.caches import new_caches
 from basix.layer import NIX_FEATURES, SUDO, Host, ensure_sudo, machine_attr, stopped
-from basix_config.stub import DEFAULT_BASIX_URL, HEADER, input_list_expr, make_stub
+from basix_config.jsonout import last_json_list
+from basix_config.stub import DEFAULT_BASIX_URL, HEADER, input_list_expr, kept_follows, make_stub
 
 # The flake output that builds the input packages (`pynix_NAME`) of the workspace. The stub must define it.
 INPUT_PACKAGES_ATTR = ".#input-packages"
@@ -43,16 +44,17 @@ def stub_url(workspace: Path) -> str | None:
 def nix_inputs(session: Session, url: str) -> list[str] | None:
     """The names in `inputs` of the `flake.nix` of an input, read from its fetched source (offline first).
 
-    The expression honours the `dir=` part of the URL (PF-6).
+    The expression honours the `dir=` part of the URL (PF-6). The runner joins stderr to stdout, and Git prints fetch
+    notes there (` * [new tag] ...`), so the answer is the last output line that is a JSON list of names. A try that
+    gives no such line counts as a failed try, and the next try runs.
     """
     expr = input_list_expr(url)
     for offline in (["--offline"], []):
         result = session.run(["nix", "eval", *offline, "--json", "--impure", "--expr", expr], quiet=True)
         if result.code == 0:
-            try:
-                return json.loads(result.out[result.out.index("[") :])
-            except ValueError:
-                return None
+            names = last_json_list(result.out)
+            if names is not None:
+                return names
     return None
 
 
@@ -149,11 +151,15 @@ class Compiler:
         """Write the managed stub. Lock the inputs when the stub changed or no lock exists."""
         stub = session.ws / "flake.nix"
         before = stub.read_text() if stub.exists() else None
+        lock = session.ws / "flake.lock"
+        lock_before = lock.read_text() if lock.exists() else None
         if before is not None and before.splitlines()[:1] != [HEADER]:
             raise stopped(session.word("not_a_stub", path=session.display(stub), header=HEADER))
         inspect = self.read_inputs or (lambda url: nix_inputs(session, url))
         try:
-            made = make_stub(found, stub_url(session.ws) or DEFAULT_BASIX_URL, inspect)
+            made = make_stub(
+                found, stub_url(session.ws) or DEFAULT_BASIX_URL, inspect, kept_follows(before, lock_before)
+            )
         except ValueError as error:
             raise stopped(str(error)) from None
         for line in made.notes:

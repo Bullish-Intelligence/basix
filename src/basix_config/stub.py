@@ -14,6 +14,9 @@ Rules for an input (009-D51, 009-D53):
 - `flake=False`: a plain source folder, with `flake = false` and no `follows` line.
 - A `follows` line for an input that does not exist makes Nix warn. So the writer reads the input list of each input
   first (`nix_input_list`) and writes only the lines that fit.
+- When the writer cannot read the input list, it keeps a `follows` line that the current stub or lock already has
+  (`kept_follows`), and it warns. It never drops such a line without a reason. A dropped line makes the lock add a
+  second `nixpkgs`.
 
 The exact text with an `Input` is a decision of slice P2 (009-D52 point 6): the text below is the spike text of
 SG44 with `lib.machine` and `root = ./.;`.
@@ -24,11 +27,13 @@ from __future__ import annotations
 import json
 import re
 import subprocess
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from dataclasses import dataclass
 from pathlib import Path
 
 from pynix_native import Found, FoundInput, FoundNixpkgsPin
+
+from basix_config.jsonout import last_json_list
 
 __all__ = [
     "DEFAULT_BASIX_URL",
@@ -37,6 +42,7 @@ __all__ = [
     "Stub",
     "extra_inputs_expr",
     "input_list_expr",
+    "kept_follows",
     "make_stub",
     "nix_input_list",
     "write_stub",
@@ -107,7 +113,9 @@ def nix_input_list(url: str) -> list[str] | None:
         except (OSError, subprocess.TimeoutExpired):
             return None
         if done.returncode == 0:
-            return json.loads(done.stdout)
+            names = last_json_list(done.stdout)
+            if names is not None:
+                return names
     return None
 
 
@@ -124,13 +132,40 @@ def _pins(found: Found) -> dict[str, str]:
     return pins
 
 
-def _stanza(item: FoundInput, have: list[str] | None, notes: list[str]) -> list[str]:
+_FOLLOWS_LINE = re.compile(r"^\s*inputs\.([A-Za-z0-9_'-]+)\.inputs\.nixpkgs\.follows\s*=", re.MULTILINE)
+
+
+def kept_follows(stub_text: str | None, lock_text: str | None) -> frozenset[str]:
+    """The names of the inputs whose `nixpkgs` follows another input in the current stub or in the current lock.
+
+    `stub_text` is the text of the managed `flake.nix`. `lock_text` is the text of `flake.lock`. Either may be None or
+    unreadable. A lock holds a follow as a list of names in `inputs.nixpkgs` of the node of the input.
+    """
+    names = set(_FOLLOWS_LINE.findall(stub_text or ""))
+    try:
+        lock = json.loads(lock_text) if lock_text else {}
+        nodes = lock.get("nodes", {})
+        for name, node in nodes.get("root", {}).get("inputs", {}).items():
+            if isinstance(node, str) and isinstance(nodes.get(node, {}).get("inputs", {}).get("nixpkgs"), list):
+                names.add(name)
+    except (ValueError, AttributeError):
+        pass
+    return frozenset(names)
+
+
+def _stanza(item: FoundInput, have: list[str] | None, notes: list[str], kept: Collection[str] = ()) -> list[str]:
     name = item.name
     out = [f"inputs.{name}.url = {_nix_string(item.url)};"]
     if not item.flake:
         out.append(f"inputs.{name}.flake = false;")
         return out
-    if have is None:
+    if have is None and name in kept:
+        notes.append(
+            f"WARNING {item.source}: could not read the inputs of `{name}`, so the stub keeps the `nixpkgs` follows"
+            " line that the workspace already has for it. Check the network and run `basix apply` again."
+        )
+        have = ["nixpkgs"]
+    elif have is None:
         notes.append(f"{item.source}: could not read the inputs of `{name}`, so the stub has no follows line for it")
         have = []
     want = item.nixpkgs
@@ -148,12 +183,16 @@ def _stanza(item: FoundInput, have: list[str] | None, notes: list[str]) -> list[
 
 
 def make_stub(
-    found: Found | None = None, basix_url: str = DEFAULT_BASIX_URL, inspect: InputList = nix_input_list
+    found: Found | None = None,
+    basix_url: str = DEFAULT_BASIX_URL,
+    inspect: InputList = nix_input_list,
+    kept: Collection[str] = (),
 ) -> Stub:
     """The text of the managed `flake.nix`.
 
     `found` holds the calls of the entry (`pynix_native.discover`); None or an empty `Found` gives the plain stub.
-    `inspect` reads the inputs of an input; a test passes a fake.
+    `inspect` reads the inputs of an input; a test passes a fake. `kept` names the inputs that already follow `nixpkgs`
+    in the current stub or lock (`kept_follows`): when `inspect` cannot read such an input, its follows line stays.
     """
     if not _FLAKE_REF.fullmatch(basix_url):
         raise ValueError(
@@ -171,7 +210,7 @@ def make_stub(
         ]
         for item in inputs:
             have = inspect(item.url) if item.flake else None
-            input_lines += _stanza(item, have, notes)
+            input_lines += _stanza(item, have, notes, kept)
         # The typed packages of the inputs: `basix apply` builds this output before it compiles `system.py`.
         modules = " ".join(
             f"{item.name} = [ {' '.join(_nix_string(m) for m in item.modules)} ];"
